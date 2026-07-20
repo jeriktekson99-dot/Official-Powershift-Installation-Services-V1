@@ -1,0 +1,8 @@
+{
+  "name": "Official: Powershift Solar Installation Services (Release)",
+  "description": "Premium, highly polished, and responsive homepage for Powershift Solar Installation Services, featuring modern solar energy setups, active ROI metrics, and site consultation forms.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
