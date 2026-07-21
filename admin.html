@@ -66,41 +66,92 @@
     }
 
     /* Structured content formatting inside editor or list summaries */
+    .wysiwyg-content, .rich-text-preview {
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif !important;
+      color: #1c1917 !important;
+      line-height: 1.6 !important;
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+      word-break: normal !important;
+    }
+    
+    .wysiwyg-content *, .rich-text-preview * {
+      box-sizing: border-box !important;
+    }
+    
+    .wysiwyg-content p, .rich-text-preview p,
+    .wysiwyg-content div, .rich-text-preview div {
+      margin-top: 0 !important;
+      margin-bottom: 0.75rem !important;
+      line-height: 1.6 !important;
+    }
+    
+    .wysiwyg-content p:last-child, .rich-text-preview p:last-child,
+    .wysiwyg-content div:last-child, .rich-text-preview div:last-child {
+      margin-bottom: 0 !important;
+    }
+
     .wysiwyg-content ul, .rich-text-preview ul {
       list-style: disc !important;
       list-style-type: disc !important;
       padding-left: 1.5rem !important;
-      margin-top: 0.35rem !important;
-      margin-bottom: 0.35rem !important;
+      margin-top: 0.25rem !important;
+      margin-bottom: 0.75rem !important;
     }
     .wysiwyg-content ol, .rich-text-preview ol {
       list-style: decimal !important;
       list-style-type: decimal !important;
       padding-left: 1.5rem !important;
-      margin-top: 0.35rem !important;
-      margin-bottom: 0.35rem !important;
+      margin-top: 0.25rem !important;
+      margin-bottom: 0.75rem !important;
     }
     .wysiwyg-content li, .rich-text-preview li {
       display: list-item !important;
       list-style: inherit !important;
-      margin-bottom: 0.25rem !important;
+      margin-top: 0 !important;
+      margin-bottom: 0.35rem !important;
+      line-height: 1.5 !important;
+    }
+    .wysiwyg-content li:last-child, .rich-text-preview li:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    .wysiwyg-content h1, .rich-text-preview h1 {
+      font-size: 1.25rem !important;
+      font-weight: 800 !important;
+      color: #05300a !important;
+      margin-top: 1rem !important;
+      margin-bottom: 0.5rem !important;
+      line-height: 1.25 !important;
+      letter-spacing: -0.02em !important;
     }
     .wysiwyg-content h2, .rich-text-preview h2 {
       font-size: 1.125rem !important;
       font-weight: 800 !important;
       color: #05300a !important;
-      margin-top: 0.35rem !important;
-      margin-bottom: 0.15rem !important;
+      margin-top: 1rem !important;
+      margin-bottom: 0.5rem !important;
       text-transform: uppercase !important;
+      line-height: 1.25 !important;
       letter-spacing: -0.025em !important;
     }
     .wysiwyg-content h3, .rich-text-preview h3 {
       font-size: 1rem !important;
       font-weight: 700 !important;
       color: #78350f !important;
-      margin-top: 0.3rem !important;
-      margin-bottom: 0.1rem !important;
+      margin-top: 0.85rem !important;
+      margin-bottom: 0.4rem !important;
+      line-height: 1.25 !important;
     }
+    .wysiwyg-content h4, .rich-text-preview h4 {
+      font-size: 0.9rem !important;
+      font-weight: 700 !important;
+      color: #1c1917 !important;
+      margin-top: 0.75rem !important;
+      margin-bottom: 0.35rem !important;
+      line-height: 1.25 !important;
+    }
+    
     .wysiwyg-content a, .rich-text-preview a {
       color: #05300a !important;
       text-decoration: underline !important;
@@ -109,14 +160,7 @@
     .wysiwyg-content i, .wysiwyg-content em, .rich-text-preview i, .rich-text-preview em {
       font-style: italic !important;
     }
-    .wysiwyg-content p, .wysiwyg-content > div, .rich-text-preview p, .rich-text-preview > div {
-      margin-bottom: 0.35rem !important;
-    }
-    .wysiwyg-content, .rich-text-preview {
-      word-wrap: break-word !important;
-      overflow-wrap: break-word !important;
-      word-break: break-all !important;
-    }
+    
     .wysiwyg-content table, .rich-text-preview table {
       width: 100% !important;
       max-width: 100% !important;
@@ -129,6 +173,7 @@
       border: 1px solid #e5e7eb !important;
       padding: 0.5rem 0.75rem !important;
       text-align: left !important;
+      line-height: 1.5 !important;
     }
     .wysiwyg-content th, .rich-text-preview th {
       background-color: #f9fafb !important;
@@ -6424,7 +6469,7 @@
             if (dist3) return dist3;
             const dist4 = extractFromHtml('Distance between panel board & inverter');
             if (dist4) return dist4;
-            return 'No distance measured yet';
+            return 'N/A (Optional)';
           }
         case 'preferredAudit':
           {
@@ -6932,7 +6977,7 @@
                       Physical Site & Inverter Specifications
                     </h3>
                     <p class="text-[9px] sm:text-[10px] font-mono font-bold text-stone-400 uppercase tracking-widest mt-1 leading-normal">
-                      Premises, audit schedule, safe location, panel distance, & photo assets
+                      Premises, audit schedule, safe location, & photo assets
                     </p>
                   </div>
                   <div class="space-y-6">
@@ -6941,15 +6986,9 @@
                       <span class="block text-sm font-extrabold text-stone-850 font-sans mt-0.5">${getLeadFieldValue(record, 'siteAddress')}</span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <span class="block text-[10px] font-mono font-bold text-stone-400 uppercase tracking-widest">Designated Safe Location</span>
-                        <span class="block text-sm font-extrabold text-stone-850 font-sans mt-0.5">${getLeadFieldValue(record, 'designatedSafeLocation')}</span>
-                      </div>
-                      <div>
-                        <span class="block text-[10px] font-mono font-bold text-stone-400 uppercase tracking-widest">Distance to Main Panel Board</span>
-                        <span class="block text-sm font-extrabold text-stone-850 font-sans mt-0.5">${getLeadFieldValue(record, 'distanceToMainPanel')}</span>
-                      </div>
+                    <div>
+                      <span class="block text-[10px] font-mono font-bold text-stone-400 uppercase tracking-widest">Designated Safe Location</span>
+                      <span class="block text-sm font-extrabold text-stone-850 font-sans mt-0.5">${getLeadFieldValue(record, 'designatedSafeLocation')}</span>
                     </div>
 
                     <div class="space-y-3 pt-5 border-t border-stone-100">
@@ -7667,9 +7706,9 @@
             <label class="text-xs font-mono font-bold text-stone-600 uppercase tracking-wide">
               ${label} ${isRequired ? '<span class="text-red-500 font-bold">*</span>' : '<span class="text-stone-400 font-normal lowercase font-sans">(Optional)</span>'}
             </label>
-            <div class="flex flex-col rounded-xl overflow-hidden border border-stone-300 focus-within:ring-2 focus-within:ring-forest-300 focus-within:border-forest transition-all">
+            <div class="flex flex-col rounded-xl overflow-hidden border border-stone-300 focus-within:ring-2 focus-within:ring-forest-300 focus-within:border-forest transition-all shadow-sm">
               <!-- Toolbar -->
-              <div class="bg-stone-900 px-3 py-2 flex flex-wrap gap-1.5 border-b border-stone-800 items-center">
+              <div class="bg-stone-900 px-3 py-2.5 flex flex-wrap gap-2 border-b border-stone-800 items-center">
                 <button type="button" onmousedown="event.preventDefault()" onclick="window.formatDoc('bold', null, '${id}')" class="editor-btn hover:bg-stone-800 hover:text-[#c8ac0c] px-2.5 py-1 text-xs font-bold text-stone-300 rounded font-mono uppercase select-none transition-colors border border-transparent hover:border-stone-700" title="Bold">B</button>
                 <button type="button" onmousedown="event.preventDefault()" onclick="window.formatDoc('underline', null, '${id}')" class="editor-btn hover:bg-stone-800 hover:text-[#c8ac0c] px-2.5 py-1 text-xs text-stone-300 rounded font-mono uppercase underline select-none transition-colors border border-transparent hover:border-stone-700" title="Underline">U</button>
                 <button type="button" onmousedown="event.preventDefault()" onclick="window.formatDoc('italic', null, '${id}')" class="editor-btn hover:bg-stone-800 hover:text-[#c8ac0c] px-2.5 py-1 text-xs text-stone-300 rounded font-mono uppercase select-none transition-colors border border-transparent hover:border-stone-700" title="Italic">I</button>
@@ -7716,14 +7755,15 @@
                 </div>
               </div>
               <!-- Editor area -->
-              <div id="${id}" class="wysiwyg-content p-4 min-h-[140px] max-h-[300px] bg-white text-stone-850 text-xs font-medium overflow-y-auto focus:outline-none" contenteditable="true"></div>
+              <div id="${id}" class="wysiwyg-content p-6 min-h-[260px] max-h-[500px] bg-white text-stone-850 text-xs sm:text-[13px] font-medium overflow-y-auto focus:outline-none leading-relaxed transition-all" contenteditable="true"></div>
             </div>
           `;
 
-          // Auto-convert manual typing triggers (*, -, 1.) into native lists
+          // Auto-convert manual typing triggers (*, -, 1.) into native lists and support paste cleaning
           setTimeout(() => {
             const editorDiv = container.querySelector(`#${id}`);
             if (editorDiv) {
+              // Keys handler
               editorDiv.addEventListener("keydown", function(e) {
                 if (e.key === " ") {
                   const selection = window.getSelection();
@@ -7747,6 +7787,56 @@
                       }
                     }
                   }
+                }
+              });
+
+              // Paste handler
+              editorDiv.addEventListener("paste", function(e) {
+                e.preventDefault();
+                const html = e.clipboardData.getData("text/html");
+                const text = e.clipboardData.getData("text/plain");
+
+                if (html) {
+                  const tempDiv = document.createElement("div");
+                  tempDiv.innerHTML = html;
+
+                  const cleanElement = (el) => {
+                    const attrsToRemove = ["style", "class", "id", "face", "color", "size", "align", "width", "height", "border", "cellspacing", "cellpadding"];
+                    attrsToRemove.forEach(attr => el.removeAttribute(attr));
+
+                    const children = Array.from(el.children);
+                    children.forEach(cleanElement);
+
+                    const tagName = el.tagName ? el.tagName.toUpperCase() : "";
+                    const allowedTags = ["P", "B", "STRONG", "I", "EM", "U", "UL", "OL", "LI", "A", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD", "H1", "H2", "H3", "H4", "BR"];
+
+                    if (tagName && !allowedTags.includes(tagName)) {
+                      const parent = el.parentNode;
+                      if (parent) {
+                        while (el.firstChild) {
+                          parent.insertBefore(el.firstChild, el);
+                        }
+                        parent.removeChild(el);
+                      }
+                    }
+                  };
+
+                  Array.from(tempDiv.children).forEach(cleanElement);
+                  
+                  let cleanHtml = tempDiv.innerHTML.trim();
+                  
+                  if (!cleanHtml || cleanHtml === "<!--StartFragment--><!--EndFragment-->") {
+                    cleanHtml = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+                  }
+
+                  document.execCommand("insertHTML", false, cleanHtml);
+                } else if (text) {
+                  const cleanText = text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/\r?\n/g, "<br>");
+                  document.execCommand("insertHTML", false, cleanText);
                 }
               });
             }

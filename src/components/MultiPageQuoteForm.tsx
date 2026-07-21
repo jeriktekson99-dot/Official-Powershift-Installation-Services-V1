@@ -243,26 +243,7 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
     }
 
     if (page === 3) {
-      const isInverterYes = (formData.designatedInverterLocation || "").startsWith('Yes');
-      if (isInverterYes) {
-        if (!formData.distanceBuildingPanels.trim()) {
-          newErrors.distanceBuildingPanels = 'Distance is required';
-        } else if (isNaN(Number(formData.distanceBuildingPanels))) {
-          newErrors.distanceBuildingPanels = 'Must be a valid number';
-        }
-      } else {
-        if (!formData.distancePanelBoardInverter.trim()) {
-          newErrors.distancePanelBoardInverter = 'Distance is required';
-        } else if (isNaN(Number(formData.distancePanelBoardInverter))) {
-          newErrors.distancePanelBoardInverter = 'Must be a valid number';
-        }
-        if (!photoMainPanelBoard) {
-          newErrors.photoMainPanelBoard = 'Photo 1 is required to verify layout';
-        }
-        if (!photoProposedLocation) {
-          newErrors.photoProposedLocation = 'Photo 2 is required to verify layout';
-        }
-      }
+      // Distance questions removed
     }
 
     if (page === 4) {
@@ -328,10 +309,8 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
         <ul style="list-style-type: none; padding-left: 0; margin-bottom: 1rem; font-size: 0.85rem;">
           <li style="margin-bottom: 0.25rem;"><strong>Inverter Location:</strong> ${formData.designatedInverterLocation || ""}</li>
           ${(formData.designatedInverterLocation || "").startsWith('Yes') ? `
-            <li style="margin-bottom: 0.25rem;"><strong>Building to Panels Distance:</strong> ${formData.distanceBuildingPanels} Meters</li>
             <li style="margin-bottom: 0.25rem;"><strong>Inverter Location Image Supplied:</strong> ${inverterLocationImage ? inverterLocationImage.name : 'No'}</li>
           ` : `
-            <li style="margin-bottom: 0.25rem;"><strong>Panel Board to Inverter Distance:</strong> ${formData.distancePanelBoardInverter} Meters</li>
             <li style="margin-bottom: 0.25rem;"><strong>Main Panel Board Photo Supplied:</strong> ${photoMainPanelBoard ? photoMainPanelBoard.name : 'No'}</li>
             <li style="margin-bottom: 0.25rem;"><strong>Proposed Location Photo Supplied:</strong> ${photoProposedLocation ? photoProposedLocation.name : 'No'}</li>
           `}
@@ -565,88 +544,41 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
       
       y += 14;
 
-      // SECTION 3: TURNKEY INVESTMENT BREAKDOWN
+      // SECTION 3: ESTIMATED LOAD CAPABILITIES (DAYTIME OPERATIONS ONLY)
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(12);
-      doc.text("3. TURNKEY INVESTMENT BREAKDOWN", 15, y);
-      y += 7;
-
-      doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-      doc.line(15, y, 195, y);
-
-      const costData = [
-        ["Solar PV Modules (Premium Tier-1)", typeof panels === 'number' ? `PHP ${panels.toLocaleString()}` : panels],
-        ["Hybrid Intelligent Inverter (Pure Sine)", typeof inverter === 'number' ? `PHP ${inverter.toLocaleString()}` : inverter],
-        ["Lithium Battery Storage (LiFePO4 Pack)", typeof batteries === 'number' ? `PHP ${batteries.toLocaleString()}` : batteries],
-        ["Balance of System (Mounting & Engineering)", typeof balance === 'number' ? `PHP ${balance.toLocaleString()}` : balance],
-      ];
-
-      costData.forEach((row) => {
-        y += rowHeight;
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
-        doc.text(row[0], 20, y - 2.5);
-        
-        doc.setFont("Helvetica", "bold");
-        doc.text(row[1], 150, y - 2.5);
-        
-        doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-        doc.line(15, y, 195, y);
-      });
-
-      // Total turnkey cost
-      y += 10;
-      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.rect(15, y - 8, 180, 9, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("Helvetica", "bold");
-      doc.text("TOTAL ESTIMATED INVESTMENT", 20, y - 2);
-      doc.text(typeof totalInvestmentVal === 'number' ? `PHP ${totalInvestmentVal.toLocaleString()}` : totalInvestmentVal, 150, y - 2);
-
-      y += 16;
-
-      // SECTION 4: ESTIMATED LOAD CAPABILITIES
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text("4. REPRESENTATIVE LOAD CAPABILITIES", 15, y);
+      doc.text("3. REPRESENTATIVE LOAD CAPABILITIES", 15, y);
       y += 6;
 
       doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(8.5);
-      doc.text("Based on your recommended system configuration, here is an indicator of what household loads can be powered:", 15, y);
+      doc.text("Based on your recommended system configuration, here are the daytime operational loads powered by solar energy:", 15, y);
       y += 8;
 
       doc.setFillColor(lightGrey[0], lightGrey[1], lightGrey[2]);
-      doc.rect(15, y, 180, 20, 'F');
+      doc.rect(15, y, 180, 36, 'F');
       
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(10);
-      doc.text("Daytime (Direct Solar Power)", 20, y + 6);
+      doc.text("Daytime Operations (Direct Solar Power)", 20, y + 6);
       doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
       doc.setFont("Helvetica", "normal");
-      doc.text(`• Inverter Aircon (2200W): ${(isOffGridMode || systemSizeVal >= 3.0) ? 'Supported' : 'Backup Needed'}   • Refrigerator (150W): ${(isOffGridMode || systemSizeVal >= 1.5) ? 'Supported' : 'Backup Needed'}`, 20, y + 11);
-      doc.text(`• Laptop Workstation (80W): ${(isOffGridMode || systemSizeVal >= 0.5) ? 'Supported' : 'Backup Needed'} • Electric Fan (55W): ${(isOffGridMode || systemSizeVal >= 0.2) ? 'Supported' : 'Backup Needed'}`, 20, y + 16);
+      doc.setFontSize(8.5);
 
-      y += 24;
-      doc.setFillColor(lightGrey[0], lightGrey[1], lightGrey[2]);
-      doc.rect(15, y, 180, 20, 'F');
-      
-      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text("Nighttime (UPS Battery Backup)", 20, y + 6);
-      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
-      doc.setFont("Helvetica", "normal");
-      doc.text(`• LED Lights (30W): ${(isOffGridMode || systemSizeVal >= 0.8) ? 'Supported' : 'Grid Backup'}   • Electric Fan (55W): ${(isOffGridMode || systemSizeVal >= 1.2) ? 'Supported' : 'Grid Backup'}`, 20, y + 11);
-      doc.text(`• Television (100W): ${(isOffGridMode || systemSizeVal >= 2.5) ? 'Supported' : 'Grid Backup'} • Wifi Router (25W): ${(isOffGridMode || systemSizeVal >= 0.3) ? 'Supported' : 'Grid Backup'}`, 20, y + 16);
+      doc.text("• Inverter Aircon (1 HP): 750 W", 20, y + 13);
+      doc.text("• Refrigerator: 150 W", 20, y + 19);
+      doc.text("• Laptop + Monitor: 80 W", 20, y + 25);
+      doc.text("• Electric Fan: 55 W", 20, y + 31);
 
-      y += 26;
+      doc.text("• Television (55\" LED): 100 W", 110, y + 13);
+      doc.text("• Washing Machine: 500 W", 110, y + 19);
+      doc.text("• Microwave Oven: 1,000 W", 110, y + 25);
+      doc.text("• Induction Cooker: 1,500 W", 110, y + 31);
+
+      y += 42;
 
       // Contact Footer Information
       doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -1070,25 +1002,12 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
                     className="space-y-4"
                   >
                     <FileUploader
-                      label="Attach Inverter Location Image"
+                      label="Attach Inverter Location Image (Optional)"
                       fieldName="inverterLocationImage"
                       currentFile={inverterLocationImage}
                       error={errors.inverterLocationImage}
-                      description="Please capture a clean image showing your selected structural wall zone with nearby electrical meters."
+                      description="You can capture a clean image showing your selected structural wall zone with nearby electrical meters (optional)."
                     />
-
-                    <div>
-                      <label className={styles.label}>Distance between building & panels (in Meters)</label>
-                      <input
-                        type="text"
-                        name="distanceBuildingPanels"
-                        value={formData.distanceBuildingPanels}
-                        onChange={handleInputChange}
-                        placeholder="e.g. 15"
-                        className={styles.input}
-                      />
-                      {errors.distanceBuildingPanels && <p className="text-xs text-red-500 mt-1 font-semibold">{errors.distanceBuildingPanels}</p>}
-                    </div>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -1098,39 +1017,26 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
                   >
                     <div className="p-3 bg-solar-yellow-500/10 border border-solar-yellow-500/20 rounded-lg text-xs leading-normal">
                       <p className={`${theme === 'dark' ? 'text-solar-yellow-400' : 'text-forest-950'} font-bold`}>
-                        Required Photos:
+                        Suggested Photos (Optional):
                       </p>
                       <p className={styles.textMuted}>
-                        Since no safe inverter location is pre-designated, our engineering team requires exactly 2 photos to verify your layout.
+                        Since no safe inverter location is pre-designated, our engineering team suggests uploading 2 photos to verify your layout, though this is completely optional.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FileUploader
-                        label="Photo 1: Main Panel Board"
+                        label="Photo 1: Main Panel Board (Optional)"
                         fieldName="photoMainPanelBoard"
                         currentFile={photoMainPanelBoard}
                         error={errors.photoMainPanelBoard}
                       />
                       <FileUploader
-                        label="Photo 2: Proposed Location"
+                        label="Photo 2: Proposed Location (Optional)"
                         fieldName="photoProposedLocation"
                         currentFile={photoProposedLocation}
                         error={errors.photoProposedLocation}
                       />
-                    </div>
-
-                    <div>
-                      <label className={styles.label}>Distance between panel board & inverter (in Meters)</label>
-                      <input
-                        type="text"
-                        name="distancePanelBoardInverter"
-                        value={formData.distancePanelBoardInverter}
-                        onChange={handleInputChange}
-                        placeholder="e.g. 8"
-                        className={styles.input}
-                      />
-                      {errors.distancePanelBoardInverter && <p className="text-xs text-red-500 mt-1 font-semibold">{errors.distancePanelBoardInverter}</p>}
                     </div>
                   </motion.div>
                 )}

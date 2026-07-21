@@ -1989,7 +1989,7 @@ export default function App() {
                 </li>
                 <li className="flex flex-col">
                   <span className="text-[9px] text-stone-500 uppercase tracking-widest font-bold">Operating Hours</span>
-                  <span className="text-stone-300 font-sans font-medium text-xs mt-0.5">Mon - Sat: 9 AM - 5 PM</span>
+                  <span className="text-stone-300 font-sans font-medium text-xs mt-0.5">Mon - Sat: 8:00 AM - 5:00 PM</span>
                 </li>
               </ul>
             </div>

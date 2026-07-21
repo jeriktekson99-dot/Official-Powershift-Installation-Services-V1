@@ -273,88 +273,41 @@ export default function FreeQuotePage() {
     
     y += 14;
 
-    // SECTION 3: TURNKEY INVESTMENT BREAKDOWN
+    // SECTION 3: ESTIMATED LOAD CAPABILITIES (DAYTIME OPERATIONS ONLY)
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(12);
-    doc.text("3. TURNKEY INVESTMENT BREAKDOWN", 15, y);
-    y += 7;
-
-    doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-    doc.line(15, y, 195, y);
-
-    const costData = [
-      ["Solar PV Modules (Premium Tier-1)", typeof calcResults.solarPanelsCost === 'number' ? `PHP ${calcResults.solarPanelsCost.toLocaleString()}` : calcResults.solarPanelsCost],
-      ["Hybrid Intelligent Inverter (Pure Sine)", typeof calcResults.inverterCost === 'number' ? `PHP ${calcResults.inverterCost.toLocaleString()}` : calcResults.inverterCost],
-      ["Lithium Battery Storage (LiFePO4 Pack)", typeof calcResults.lithiumStorageCost === 'number' ? `PHP ${calcResults.lithiumStorageCost.toLocaleString()}` : calcResults.lithiumStorageCost],
-      ["Balance of System (Mounting & Engineering)", typeof calcResults.balanceCost === 'number' ? `PHP ${calcResults.balanceCost.toLocaleString()}` : calcResults.balanceCost],
-    ];
-
-    costData.forEach((row) => {
-      y += rowHeight;
-      doc.setFont("Helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
-      doc.text(row[0], 20, y - 2.5);
-      
-      doc.setFont("Helvetica", "bold");
-      doc.text(row[1], 150, y - 2.5);
-      
-      doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-      doc.line(15, y, 195, y);
-    });
-
-    // Total turnkey cost
-    y += 10;
-    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.rect(15, y - 8, 180, 9, 'F');
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("Helvetica", "bold");
-    doc.text("TOTAL ESTIMATED INVESTMENT", 20, y - 2);
-    doc.text(typeof calcResults.totalInvestment === 'number' ? `PHP ${calcResults.totalInvestment.toLocaleString()}` : calcResults.totalInvestment, 150, y - 2);
-
-    y += 16;
-
-    // SECTION 4: ESTIMATED LOAD CAPABILITIES
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont("Helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("4. REPRESENTATIVE LOAD CAPABILITIES", 15, y);
+    doc.text("3. REPRESENTATIVE LOAD CAPABILITIES", 15, y);
     y += 6;
 
     doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.text("Based on your recommended system configuration, here is an indicator of what household loads can be powered:", 15, y);
+    doc.text("Based on your recommended system configuration, here are the daytime operational loads powered by solar energy:", 15, y);
     y += 8;
 
     doc.setFillColor(lightGrey[0], lightGrey[1], lightGrey[2]);
-    doc.rect(15, y, 180, 20, 'F');
+    doc.rect(15, y, 180, 36, 'F');
     
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(10);
-    doc.text("Daytime (Direct Solar Power)", 20, y + 6);
+    doc.text("Daytime Operations (Direct Solar Power)", 20, y + 6);
     doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
     doc.setFont("Helvetica", "normal");
-    doc.text(`• Inverter Aircon (2200W): ${(calcResults.isOffGrid || calcResults.systemSize >= 3.0) ? 'Supported' : 'Backup Needed'}   • Refrigerator (150W): ${(calcResults.isOffGrid || calcResults.systemSize >= 1.5) ? 'Supported' : 'Backup Needed'}`, 20, y + 11);
-    doc.text(`• Laptop Workstation (80W): ${(calcResults.isOffGrid || calcResults.systemSize >= 0.5) ? 'Supported' : 'Backup Needed'} • Electric Fan (55W): ${(calcResults.isOffGrid || calcResults.systemSize >= 0.2) ? 'Supported' : 'Backup Needed'}`, 20, y + 16);
+    doc.setFontSize(8.5);
 
-    y += 24;
-    doc.setFillColor(lightGrey[0], lightGrey[1], lightGrey[2]);
-    doc.rect(15, y, 180, 20, 'F');
-    
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.setFont("Helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("Nighttime (UPS Battery Backup)", 20, y + 6);
-    doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
-    doc.setFont("Helvetica", "normal");
-    doc.text(`• LED Lights (30W): ${(calcResults.isOffGrid || calcResults.systemSize >= 0.8) ? 'Supported' : 'Grid Backup'}   • Electric Fan (55W): ${(calcResults.isOffGrid || calcResults.systemSize >= 1.2) ? 'Supported' : 'Grid Backup'}`, 20, y + 11);
-    doc.text(`• Television (100W): ${(calcResults.isOffGrid || calcResults.systemSize >= 2.5) ? 'Supported' : 'Grid Backup'} • Wifi Router (25W): ${(calcResults.isOffGrid || calcResults.systemSize >= 0.3) ? 'Supported' : 'Grid Backup'}`, 20, y + 16);
+    doc.text("• Inverter Aircon (1 HP): 750 W", 20, y + 13);
+    doc.text("• Refrigerator: 150 W", 20, y + 19);
+    doc.text("• Laptop + Monitor: 80 W", 20, y + 25);
+    doc.text("• Electric Fan: 55 W", 20, y + 31);
 
-    y += 26;
+    doc.text("• Television (55\" LED): 100 W", 110, y + 13);
+    doc.text("• Washing Machine: 500 W", 110, y + 19);
+    doc.text("• Microwave Oven: 1,000 W", 110, y + 25);
+    doc.text("• Induction Cooker: 1,500 W", 110, y + 31);
+
+    y += 42;
 
     // Contact Footer Information
     doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -544,7 +497,7 @@ export default function FreeQuotePage() {
                   <div>
                     <span className="block text-xs font-mono text-stone-500 uppercase tracking-widest font-bold">Operating Hours</span>
                     <span className="text-base sm:text-lg font-bold text-forest-950 block">
-                      Monday – Saturday, 9:00 AM – 5:00 PM (PST)
+                      Monday – Saturday, 8:00 AM - 5:00 PM
                     </span>
                   </div>
                 </div>
@@ -663,7 +616,7 @@ export default function FreeQuotePage() {
             <div id="solar-calculator-output" className="bg-white p-8 sm:p-10 flex flex-col justify-between space-y-8 scroll-mt-6 print:p-0">
               
               <div className="space-y-8">
-                {/* PANEL A: WHAT CAN I RUN? Two-Card Horizontal Layout */}
+                {/* PANEL A: WHAT CAN I RUN? Single Container Daytime Layout */}
                 <div className="space-y-4">
                   <div>
                     <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest font-black block leading-none mb-1">
@@ -674,133 +627,49 @@ export default function FreeQuotePage() {
                     </h5>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Card 1: DAYTIME */}
-                    <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/10 flex flex-col justify-between space-y-6 shadow-sm">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-[#05300a] shrink-0" />
-                            <span className="font-display font-black text-stone-800 text-xs sm:text-sm uppercase tracking-wide">
-                              DAYTIME
-                            </span>
-                          </div>
-                          <span className="bg-[#c8ac0c] text-stone-900 px-2.5 py-1 rounded font-mono font-black text-[10px] sm:text-xs shrink-0">
-                            {calcResults.isOffGrid ? 'Grid Independent' : `₱${Math.round((calcResults.totalInvestment as number) * 0.6).toLocaleString()}`}
-                          </span>
-                        </div>
-                        
-                        {/* Appliance list container styled identical to Panel B */}
-                        <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/20 font-mono text-xs text-stone-800">
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Inverter Aircon</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 3.0) ? 'text-[#05300a]' : 'text-stone-300'}`}>2,200 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Refrigerator</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 1.5) ? 'text-[#05300a]' : 'text-stone-300'}`}>150 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Laptop + Monitor</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 0.5) ? 'text-[#05300a]' : 'text-stone-300'}`}>80 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Electric Fan</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 0.2) ? 'text-[#05300a]' : 'text-stone-300'}`}>55 W</span>
-                          </div>
-                        </div>
+                  {/* Daytime Container */}
+                  <div className="border border-solar-yellow-500/30 rounded-2xl p-6 sm:p-8 bg-stone-50/50 flex flex-col space-y-6 shadow-sm w-full">
+                    <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                      <Zap className="w-5 h-5 text-solar-yellow-600 shrink-0" />
+                      <span className="font-display font-black text-stone-900 text-sm sm:text-base uppercase tracking-wide">
+                        Daytime Operations (Direct Solar Power)
+                      </span>
+                    </div>
+                    
+                    {/* 2x4 grid container */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs text-stone-800">
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Inverter Aircon (1 HP)</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">750 W</span>
                       </div>
-                    </div>
-
-                    {/* Card 2: NIGHTTIME */}
-                    <div className="border border-slate-200 rounded-2xl p-6 bg-slate-50/10 flex flex-col justify-between space-y-6 shadow-sm">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <BatteryCharging className="w-5 h-5 text-[#05300a] shrink-0" />
-                            <span className="font-display font-black text-stone-800 text-xs sm:text-sm uppercase tracking-wide">
-                              NIGHTTIME
-                            </span>
-                          </div>
-                          <span className="bg-[#c8ac0c] text-stone-900 px-2.5 py-1 rounded font-mono font-black text-[10px] sm:text-xs shrink-0">
-                            {calcResults.isOffGrid ? 'Battery Power' : `₱${Math.round((calcResults.totalInvestment as number) * 0.4).toLocaleString()}`}
-                          </span>
-                        </div>
-                        
-                        {/* Appliance list container styled identical to Panel B */}
-                        <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/20 font-mono text-xs text-stone-800">
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">LED Lights</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 0.8) ? 'text-[#05300a]' : 'text-stone-300'}`}>30 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Electric Fan</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 1.2) ? 'text-[#05300a]' : 'text-stone-300'}`}>55 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Television</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 2.5) ? 'text-[#05300a]' : 'text-stone-300'}`}>100 W</span>
-                          </div>
-                          <div className="flex justify-between items-center p-3 bg-white">
-                            <span className="font-bold uppercase text-stone-600 text-left text-[11px] tracking-wide">Wifi Router</span>
-                            <span className={`font-mono font-extrabold text-xs sm:text-sm shrink-0 ${(calcResults.isOffGrid || calcResults.systemSize >= 0.3) ? 'text-[#05300a]' : 'text-stone-300'}`}>25 W</span>
-                          </div>
-                        </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Television (55" LED)</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">100 W</span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* PANEL B: ESTIMATED INVESTMENT BREAKDOWN */}
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <span className="text-[10px] font-mono text-stone-400 uppercase tracking-widest font-black block leading-none mb-1">
-                      PANEL B: BILL OF ASSETS ESTIMATE
-                    </span>
-                    <h5 className="text-xs font-mono font-black text-[#05300a] uppercase tracking-widest">
-                      Estimated Turnkey Engineering Investment Breakdown
-                    </h5>
-                  </div>
-
-                  <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50/20 font-mono text-xs text-stone-800">
-                    {/* Itemized row 1 */}
-                    <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-white">
-                      <span className="font-bold uppercase text-stone-600 text-left">Solar PV Modules</span>
-                      <span className="font-extrabold text-[#05300a] shrink-0">
-                        {typeof calcResults.solarPanelsCost === 'number' ? `₱${calcResults.solarPanelsCost.toLocaleString()}` : calcResults.solarPanelsCost}
-                      </span>
-                    </div>
-
-                    {/* Itemized row 2 */}
-                    <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-white">
-                      <span className="font-bold uppercase text-stone-600 text-left">Hybrid Intelligent Inverter</span>
-                      <span className="font-extrabold text-[#05300a] shrink-0">
-                        {typeof calcResults.inverterCost === 'number' ? `₱${calcResults.inverterCost.toLocaleString()}` : calcResults.inverterCost}
-                      </span>
-                    </div>
-
-                    {/* Itemized row 3 */}
-                    <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-white">
-                      <span className="font-bold uppercase text-stone-600 text-left">Lithium Battery Storage</span>
-                      <span className="font-extrabold text-[#05300a] shrink-0">
-                        {typeof calcResults.lithiumStorageCost === 'number' ? `₱${calcResults.lithiumStorageCost.toLocaleString()}` : calcResults.lithiumStorageCost}
-                      </span>
-                    </div>
-
-                    {/* Itemized row 4 */}
-                    <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50/30">
-                      <span className="font-bold uppercase text-stone-600 text-left">Balance of System</span>
-                      <span className="font-extrabold text-[#05300a] shrink-0">
-                        {typeof calcResults.balanceCost === 'number' ? `₱${calcResults.balanceCost.toLocaleString()}` : calcResults.balanceCost}
-                      </span>
-                    </div>
-
-                    {/* Final prominent bold total row */}
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center p-5 bg-[#05300a]/5 border-t-2 border-dashed border-slate-200">
-                      <span className="font-display font-black uppercase text-[#05300a] text-sm tracking-wide">TOTAL ESTIMATED INVESTMENT</span>
-                      <span className="font-display font-black text-[#05300a] text-lg sm:text-xl tracking-tight mt-1 sm:mt-0">
-                        {typeof calcResults.totalInvestment === 'number' ? `₱${calcResults.totalInvestment.toLocaleString()}` : calcResults.totalInvestment}
-                      </span>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Refrigerator</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">150 W</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Washing Machine</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">500 W</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Laptop + Monitor</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">80 W</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Microwave Oven</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">1,000 W</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Electric Fan</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">55 W</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3.5 border border-slate-100 rounded-xl bg-white shadow-xs">
+                        <span className="font-bold uppercase text-stone-600 text-[11px] tracking-wide">Induction Cooker</span>
+                        <span className="font-extrabold text-[#05300a] text-xs sm:text-sm shrink-0">1,500 W</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -830,56 +699,28 @@ export default function FreeQuotePage() {
                     type="button"
                     onClick={() => {
                       const systemSize = calcResults.systemSize;
-                      const costVal = calcResults.totalInvestment;
-                      const panels = calcResults.solarPanelsCost;
-                      const inverter = calcResults.inverterCost;
-                      const batteries = calcResults.lithiumStorageCost;
-                      const balance = calcResults.balanceCost;
                       const monthlySavings = calcResults.estSavings;
                       const paybackStr = `${calcResults.paybackYears} Years, ${calcResults.paybackMonths} Months`;
                       
-                      const formattedCostVal = typeof costVal === 'number' ? `PHP ${costVal.toLocaleString()}` : costVal;
-                      const formattedPanels = typeof panels === 'number' ? `PHP ${panels.toLocaleString()}` : panels;
-                      const formattedInverter = typeof inverter === 'number' ? `PHP ${inverter.toLocaleString()}` : inverter;
-                      const formattedBatteries = typeof batteries === 'number' ? `PHP ${batteries.toLocaleString()}` : batteries;
-                      const formattedBalance = typeof balance === 'number' ? `PHP ${balance.toLocaleString()}` : balance;
-
-                      const daytimeCostStr = typeof costVal === 'number' ? `PHP ${Math.round(costVal * 0.6).toLocaleString()}` : "Included in Off-Grid Package";
-                      const nighttimeCostStr = typeof costVal === 'number' ? `PHP ${Math.round(costVal * 0.4).toLocaleString()}` : "Included in Off-Grid Package";
-
                       const formatData = `Powershift Solar - Technical Simulation Report
 ------------------------------------------------------
 Monthly Electric Operating Bill: PHP ${billInput.toLocaleString()}
 Retail Tariff Rate Assumption: PHP ${pricePerKwh.toFixed(2)} / kWh
 Calculated Optimal Asset Size: ${systemSize} kWp
 
-Bill of Assets Investment Estimator:
-- Solar Modules (Tier-1 Monocrystalline, 40%): ${formattedPanels}
-- Intelligent Hybrid Inverter (Pure Sine Wave, 20%): ${formattedInverter}
-- Lithium Battery Storage (LiFePO4 Pack, 25%): ${formattedBatteries}
-- Balance of System (Hardware & Engineering, 15%): ${formattedBalance}
-------------------------------------------------------
-TOTAL Turnkey Sizing Budget: ${formattedCostVal}
-
-Load Distribution System Budgets:
-- Daytime Direct Solar assets: ${daytimeCostStr}
-- Nighttime Battery Backup storage hardware: ${nighttimeCostStr}
-
 Asset ROI & Payload Forecast:
 - Est. Bill Offset Savings: PHP ${monthlySavings.toLocaleString()} / Month
 - Capital Payback Duration: ${paybackStr}
 
-Load Harvester Capability Indicators (Representative Examples):
-- DAYTIME:
-  * Inverter Aircon (3.0 HP Multi-split) - 2,200 W: ${systemSize >= 3.0 ? 'Supported' : 'Secondary Grid Backup Needed'}
-  * Refrigerator (Inverter cooling) - 150 W: ${systemSize >= 1.5 ? 'Supported' : 'Secondary Grid Backup Needed'}
-  * Laptop + Monitor (Workstation) - 80 W: ${systemSize >= 0.5 ? 'Supported' : 'Secondary Grid Backup Needed'}
-  * Electric Fan (Circulator load) - 55 W: ${systemSize >= 0.2 ? 'Supported' : 'Secondary Grid Backup Needed'}
-- NIGHTTIME (BATTERY BACKUP):
-  * LED Lights (Standard House Loads) - 30 W: ${systemSize >= 0.8 ? 'Supported' : 'Grid Backup'}
-  * Electric Fan (Standard Cooling) - 55 W: ${systemSize >= 1.2 ? 'Supported' : 'Grid Backup'}
-  * Television (Smart UI 55") - 100 W: ${systemSize >= 2.5 ? 'Supported' : 'Grid Backup'}
-  * Wifi Router (Dual-band Fiber) - 25 W: ${systemSize >= 0.3 ? 'Supported' : 'Grid Backup'}
+Load Harvester Capability Indicators (Daytime Operations):
+- Inverter Aircon (1 HP): 750 W
+- Refrigerator: 150 W
+- Laptop + Monitor: 80 W
+- Electric Fan: 55 W
+- Television (55" LED): 100 W
+- Washing Machine: 500 W
+- Microwave Oven: 1,000 W
+- Induction Cooker: 1,500 W
 
 Unlock customized rooftop engineering mockups at powershiftsolar.com`;
 
