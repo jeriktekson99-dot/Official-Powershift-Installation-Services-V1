@@ -103,7 +103,7 @@ export default function ProjectDetailsPage({ projectId, onBack, onStartConsultat
       status: 'Fully Operational & Certified',
       payback: '3.8 Years Estimated',
       personnel: [
-        { name: 'Jaime Cruz', role: 'Master Electrician' }
+        { name: 'Cedric Himongala', role: 'Master Electrician' }
       ],
       panelSpecs: '395x 380W Tier-1 Mono PV Modules',
       inverterType: '3x High-Voltage Commercial String Inverters'
@@ -192,7 +192,7 @@ export default function ProjectDetailsPage({ projectId, onBack, onStartConsultat
       payback: '4.8 Years Estimated',
       personnel: [
         { name: 'Engr. Luis Fernandez', role: 'Grid Interconnection Lead' },
-        { name: 'Jaime Cruz', role: 'Master Electrician' }
+        { name: 'Cedric Himongala', role: 'Master Electrician' }
       ],
       panelSpecs: '32x 375W Symmetrical All-Black Modules',
       inverterType: 'Symmetrical Micro-inverters with Net-Metering Node'
@@ -310,7 +310,7 @@ export default function ProjectDetailsPage({ projectId, onBack, onStartConsultat
       payback: '4.6 Years Estimated',
       personnel: [
         { name: 'Arthur Pendelton', role: 'Project Coordinator' },
-        { name: 'Jaime Cruz', role: 'Master Electrician' }
+        { name: 'Cedric Himongala', role: 'Master Electrician' }
       ],
       panelSpecs: '40x 375W Multi-busbar Solar Modules',
       inverterType: 'Under-tile Smart Micro-optimization Units'
