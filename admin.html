@@ -3025,6 +3025,13 @@
         return;
       }
 
+      const submitBtn = loginForm.querySelector("button[type='submit']");
+      const origBtnText = submitBtn ? submitBtn.innerText : "Sign In";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "AUTHENTICATING...";
+      }
+
       // 1. Try Supabase Auth Login
       if (typeof window.supabaseLogin === "function") {
         try {
@@ -3040,21 +3047,27 @@
           window.MASTER_CORP_EMAIL = emailVal;
           localStorage.setItem("powershift_admin_email", emailVal);
           
-          // Transition cleanly
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = origBtnText;
+          }
+
+          // Transition cleanly and immediately render dashboard with local cached data
           viewLogin.classList.add("opacity-0", "transition-opacity", "duration-300");
-          setTimeout(async () => {
+          setTimeout(() => {
             viewLogin.classList.add("hidden");
             viewLogin.classList.remove("opacity-0");
             viewDashboard.classList.remove("hidden");
             
-            if (typeof window.pullFromSupabaseGlobal === "function") {
-              try {
-                await window.pullFromSupabaseGlobal();
-              } catch (pullErr) {
-                console.error("[Supabase Pull Failed]", pullErr);
-              }
-            }
+            // Render dashboard immediately with locally available data
             renderDashboard();
+            
+            // Pull fresh cloud data asynchronously in the background
+            if (typeof window.pullFromSupabaseGlobal === "function") {
+              window.pullFromSupabaseGlobal().catch(pullErr => {
+                console.error("[Supabase Background Pull Failed]", pullErr);
+              });
+            }
           }, 300);
           return;
         } catch (authError) {
@@ -3062,6 +3075,10 @@
           loginErrorText.innerText = authError.message || "Invalid credentials. Access denied.";
           loginError.classList.remove("hidden");
           triggerToast("Invalid Login Credentials.", "danger");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = origBtnText;
+          }
           return;
         }
       }
@@ -3075,6 +3092,11 @@
         sessionStorage.setItem("powershift_admin_logged_in", "true");
         triggerToast("Access Granted. Handshaking secure terminal.", "success");
         
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = origBtnText;
+        }
+
         // Transition cleanly
         viewLogin.classList.add("opacity-0", "transition-opacity", "duration-300");
         setTimeout(() => {
@@ -3089,6 +3111,10 @@
         loginErrorText.innerText = "Invalid credentials. Access denied.";
         loginError.classList.remove("hidden");
         triggerToast("Invalid Login Credentials.", "danger");
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = origBtnText;
+        }
       }
     });
 
@@ -8646,10 +8672,10 @@
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (session) {
           console.log("[Powershift Admin Sync] Supabase active user session detected/changed:", event);
-          try {
-            await pullFromSupabase();
-          } catch (err) {
-            console.error("[Powershift Admin Sync] Automatic pull failed on session handshake:", err);
+          if (typeof window.pullFromSupabaseGlobal === "function") {
+            window.pullFromSupabaseGlobal().catch(err => {
+              console.error("[Powershift Admin Sync] Automatic pull failed on session handshake:", err);
+            });
           }
         }
       });
@@ -9216,15 +9242,30 @@
       }
 
       // Wrappers to handle sync status indicators and error capturing
+      let activePullPromise = null;
+
       async function wrappedPull() {
-        updateSyncStatus("syncing");
-        try {
-          await pullFromSupabase();
-          updateSyncStatus("synced");
-        } catch (err) {
-          console.error("Pull from Supabase failed:", err);
-          updateSyncStatus("error", err.message || err);
+        if (activePullPromise) {
+          console.log("[Powershift Admin Sync] Data pull already in progress, reusing active request.");
+          return activePullPromise;
         }
+        updateSyncStatus("syncing");
+        activePullPromise = (async () => {
+          try {
+            await pullFromSupabase();
+            updateSyncStatus("synced");
+            window.supabasePullCompleted = true;
+            if (typeof renderDashboard === "function") {
+              renderDashboard();
+            }
+          } catch (err) {
+            console.error("Pull from Supabase failed:", err);
+            updateSyncStatus("error", err.message || err);
+          } finally {
+            activePullPromise = null;
+          }
+        })();
+        return activePullPromise;
       }
 
       async function wrappedSyncDatabase() {
