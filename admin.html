@@ -718,6 +718,28 @@
             </svg>
           </button>
 
+          <!-- Calculator Button (Solar & Battery Calculator) -->
+          <button 
+            type="button"
+            id="calculator-placeholder-btn"
+            class="p-1.5 text-stone-500 hover:text-[#05300a] hover:bg-[#05300a]/10 rounded-xl transition-all cursor-pointer relative group" 
+            title="Solar & Battery Sizing Calculator" 
+            onclick="window.openSolarCalculatorModal()"
+          >
+            <svg class="w-6 h-6 transition-transform group-hover:scale-105 duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="16" height="20" x="4" y="2" rx="2" />
+              <line x1="8" x2="16" y1="6" y2="6" />
+              <line x1="16" x2="16" y1="14" y2="18" />
+              <path d="M16 10h.01" />
+              <path d="M12 10h.01" />
+              <path d="M8 10h.01" />
+              <path d="M12 14h.01" />
+              <path d="M8 14h.01" />
+              <path d="M12 18h.01" />
+              <path d="M8 18h.01" />
+            </svg>
+          </button>
+
           <!-- Website Logo Graphic (No container, raw interactive generic website icon logo element) -->
           <a 
             href="/" 
@@ -1313,6 +1335,72 @@
       <div id="record-flat-view" class="hidden flex-1 p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto bg-stone-50">
         <!-- Dynamically filled by Javascript based on tab type -->
       </div>
+
+      <!-- SOLAR & BATTERY SIZING CALCULATOR VIEW (Dedicated Admin Page View) -->
+      <div id="solar-calculator-view" class="hidden flex-1 p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto bg-stone-50">
+        
+        <!-- Header Controls Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between bg-white px-6 py-5 rounded-3xl border border-stone-200 shadow-xs gap-4 shrink-0">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl border border-stone-200 bg-stone-50 text-[#05300a] flex items-center justify-center shadow-3xs shrink-0">
+              <svg class="w-5 h-5 text-[#05300a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="16" height="20" x="4" y="2" rx="2" />
+                <line x1="8" x2="16" y1="6" y2="6" />
+                <line x1="16" x2="16" y1="14" y2="18" />
+                <path d="M16 10h.01" />
+                <path d="M12 10h.01" />
+                <path d="M8 10h.01" />
+                <path d="M12 14h.01" />
+                <path d="M8 14h.01" />
+                <path d="M12 18h.01" />
+                <path d="M8 18h.01" />
+              </svg>
+            </div>
+            <div class="flex flex-col">
+              <h2 class="font-display font-black text-lg sm:text-xl text-stone-900 tracking-tight uppercase leading-tight">
+                SOLAR & BATTERY SIZING CALCULATOR
+              </h2>
+              <div class="flex items-center gap-2 flex-wrap mt-1.5">
+                <span class="text-[10px] font-mono font-bold text-stone-400 uppercase tracking-wider">
+                  HIGH-SPEED ENERGY SIZING TOOL
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-3 shrink-0 self-stretch sm:self-auto justify-end flex-wrap">
+            <button 
+              type="button" 
+              onclick="window.copySolarCalculatorLink()"
+              class="px-4 py-2.5 rounded-xl border border-stone-300 hover:border-[#05300a] hover:bg-stone-100 text-stone-700 hover:text-[#05300a] text-xs font-mono font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-3xs shrink-0"
+              title="Copy Direct Link to Calculator"
+            >
+              <svg class="w-4 h-4 text-stone-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <span>COPY LINK</span>
+            </button>
+
+            <button 
+              type="button" 
+              onclick="window.copySolarProposalSummary()"
+              class="px-4 py-2.5 rounded-xl border border-[#05300a]/30 hover:border-[#05300a] hover:bg-[#05300a]/5 text-[#05300a] text-xs font-mono font-black uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-3xs shrink-0"
+              title="Copy Proposal Summary"
+            >
+              <svg class="w-4 h-4 text-[#05300a] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 002-2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>COPY PROPOSAL SUMMARY</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Scrollable Body Target for Solar Calculator Engine -->
+        <div id="solar-calc-modal-body" class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200 shadow-sm space-y-6">
+          <!-- Dynamically populated by window.renderSolarCalculator() -->
+        </div>
+
+      </div>
     </main>
 
   </div>
@@ -1615,6 +1703,9 @@
       </div>
     </div>
   </div>
+
+
+
 
 
   <!-- EDIT / CREATE MODAL CONTAINER -->
@@ -2677,6 +2768,16 @@
         fields: [],
         stats: () => []
       },
+      solar_calculator: {
+        title: "Solar & Battery Sizing Calculator",
+        description: "High-speed energy sizing & side-by-side proposal tool for sales agents and system designers.",
+        addButtonLabel: "",
+        searchPlaceholder: "",
+        statuses: [],
+        tableHeaders: [],
+        fields: [],
+        stats: () => []
+      },
       special_offers: {
         title: "Special Offers & Promos",
         description: "Configure active marketing campaigns, discounts, and banner visuals.",
@@ -2994,11 +3095,65 @@
       });
     }
 
+    // STANDALONE PUBLIC CALCULATOR MODE (Prohibits access to rest of dashboard)
+    function enterPublicCalculatorMode() {
+      const viewLogin = document.getElementById("view-login");
+      const viewDashboard = document.getElementById("view-dashboard");
+      const sidebarPanel = document.getElementById("sidebar-panel");
+      const headerEl = viewDashboard ? viewDashboard.querySelector("header") : null;
+      const mobileHeader = viewDashboard ? viewDashboard.querySelector(".lg\\:hidden") : null;
+
+      if (viewLogin) viewLogin.classList.add("hidden");
+      if (viewDashboard) viewDashboard.classList.remove("hidden");
+      
+      // Prohibit and hide all dashboard navigation, sidebar, and headers
+      if (sidebarPanel) {
+        sidebarPanel.classList.add("hidden");
+        sidebarPanel.style.setProperty("display", "none", "important");
+      }
+      if (headerEl) {
+        headerEl.classList.add("hidden");
+        headerEl.style.setProperty("display", "none", "important");
+      }
+      if (mobileHeader) {
+        mobileHeader.classList.add("hidden");
+        mobileHeader.style.setProperty("display", "none", "important");
+      }
+
+      // Hide all other dashboard panels
+      const viewsToHide = ["overview-view", "operational-view", "settings-view", "special-offers-view", "record-flat-view"];
+      viewsToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add("hidden");
+      });
+
+      // Render exclusively the Solar & Battery Calculator View
+      const solarCalcView = document.getElementById("solar-calculator-view");
+      if (solarCalcView) {
+        solarCalcView.classList.remove("hidden");
+        currentTab = "solar_calculator";
+        if (typeof window.renderSolarCalculator === "function") {
+          window.renderSolarCalculator();
+        }
+      }
+    }
+
     // SESSION PERSISTENCE CHECKER
     function checkSession() {
       // Initialize Special Offers Data and Event Listeners
       loadSpecialOffers();
       initOfferMediaDropzone();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPublicCalculator = urlParams.get("tool") === "solar-calculator" || 
+                                 urlParams.get("tool") === "solar_calculator" || 
+                                 urlParams.get("view") === "solar-calculator" ||
+                                 urlParams.get("public") === "solar_calculator";
+
+      if (isPublicCalculator) {
+        enterPublicCalculatorMode();
+        return;
+      }
 
       const isLoggedIn = sessionStorage.getItem("powershift_admin_logged_in");
       if (isLoggedIn === "true") {
@@ -3192,6 +3347,8 @@
           if (operationalView) operationalView.classList.add("hidden");
           if (settingsView) settingsView.classList.add("hidden");
           if (specialOffersView) specialOffersView.classList.add("hidden");
+          const solarCalcView = document.getElementById("solar-calculator-view");
+          if (solarCalcView) solarCalcView.classList.add("hidden");
           if (addRecordBtn) addRecordBtn.classList.add("hidden");
           
           renderFlatRecordPage(record, currentTab);
@@ -3223,12 +3380,15 @@
       
       if (flatViewEl) flatViewEl.classList.add("hidden");
       
-      // Toggle views depending on whether the selection is "overview", "settings", or "special_offers"
+      // Toggle views depending on whether the selection is "overview", "solar_calculator", "settings", or "special_offers"
+      const solarCalcViewEl = document.getElementById("solar-calculator-view");
+
       if (currentTab === "overview") {
         document.getElementById("overview-view").classList.remove("hidden");
         document.getElementById("operational-view").classList.add("hidden");
         document.getElementById("settings-view").classList.add("hidden");
         document.getElementById("special-offers-view").classList.add("hidden");
+        if (solarCalcViewEl) solarCalcViewEl.classList.add("hidden");
         
         // Hide standard actions/buttons in the top-bar since it's an overview panel
         if (addRecordBtn) addRecordBtn.classList.add("hidden");
@@ -3260,11 +3420,47 @@
         streamTitle.innerText = activeMeta.title;
         streamDescription.innerText = activeMeta.description;
         return;
+      } else if (currentTab === "solar_calculator") {
+        document.getElementById("overview-view").classList.add("hidden");
+        document.getElementById("operational-view").classList.add("hidden");
+        document.getElementById("settings-view").classList.add("hidden");
+        document.getElementById("special-offers-view").classList.add("hidden");
+        if (solarCalcViewEl) solarCalcViewEl.classList.remove("hidden");
+        
+        if (addRecordBtn) addRecordBtn.classList.add("hidden");
+        
+        window.renderSolarCalculator();
+        
+        // Highlight active sidebar navigation button
+        document.querySelectorAll(".sidebar-nav-btn").forEach((btn) => {
+          const tabKey = btn.getAttribute("data-tab");
+          if (tabKey === currentTab) {
+            btn.classList.add("bg-forest-800/60", "text-solar-yellow-500", "border-solar-yellow-500");
+            btn.classList.remove("text-forest-100/70", "border-transparent");
+          } else {
+            btn.classList.remove("bg-forest-800/60", "text-solar-yellow-500", "border-solar-yellow-500");
+            btn.classList.add("text-forest-100/70", "border-transparent");
+          }
+        });
+        
+        // Render Badges for Nav Items dynamically
+        Object.keys(db).forEach((key) => {
+          const badge = document.getElementById(`badge-${key}`);
+          if (badge) {
+            badge.innerText = db[key].length;
+          }
+        });
+        
+        // Update header texts
+        streamTitle.innerText = activeMeta.title;
+        streamDescription.innerText = activeMeta.description;
+        return;
       } else if (currentTab === "settings") {
         document.getElementById("overview-view").classList.add("hidden");
         document.getElementById("operational-view").classList.add("hidden");
         document.getElementById("settings-view").classList.remove("hidden");
         document.getElementById("special-offers-view").classList.add("hidden");
+        if (solarCalcViewEl) solarCalcViewEl.classList.add("hidden");
         
         // Render sub-sections
         renderSettingsView();
@@ -3292,6 +3488,7 @@
         document.getElementById("operational-view").classList.add("hidden");
         document.getElementById("settings-view").classList.add("hidden");
         document.getElementById("special-offers-view").classList.remove("hidden");
+        if (solarCalcViewEl) solarCalcViewEl.classList.add("hidden");
         
         // Hide standard actions/buttons in the top-bar
         if (addRecordBtn) addRecordBtn.classList.add("hidden");
@@ -3328,6 +3525,7 @@
         document.getElementById("operational-view").classList.remove("hidden");
         document.getElementById("settings-view").classList.add("hidden");
         document.getElementById("special-offers-view").classList.add("hidden");
+        if (solarCalcViewEl) solarCalcViewEl.classList.add("hidden");
       }
       
       // 1. Update text metadata & placeholders
@@ -4807,6 +5005,568 @@
       }
       updateActiveSchedulesCountBadge();
     };
+
+    // SOLAR & BATTERY SIZING CALCULATOR ENGINE FOR SALES AGENTS
+    let solarCalcMode = 'single'; // 'single' | 'compare'
+    let solarShowAdvanced = false;
+
+    let solarState = {
+      daysInMonth: 30,
+      amRatio: 0.40,
+      pmRatio: 0.60,
+      efficiencyLossRatio: 0.15,
+      peakSunHours: 5.0,
+      dodUsableRatio: 0.80,
+
+      monthlyKwh: 940,
+      solarWatts: 8000,
+      batteryWh: 16000,
+
+      sysA: { solarWatts: 8000, batteryWh: 16000 },
+      sysB: { solarWatts: 6200, batteryWh: 10000 },
+
+      quickCmd: ''
+    };
+
+    window.openSolarCalculatorModal = function() {
+      currentTab = "solar_calculator";
+      adminCurrentPage = 1;
+      if (searchInput) searchInput.value = "";
+      if (headerSearchInput) headerSearchInput.value = "";
+      currentOpenRecordId = null;
+      renderDashboard();
+    };
+
+    window.closeSolarCalculatorModal = function() {
+      currentTab = "overview";
+      renderDashboard();
+    };
+
+    window.setSolarCalcMode = function(mode) {
+      solarCalcMode = mode;
+      const btnSingle = document.getElementById("btn-solar-mode-single");
+      const btnCompare = document.getElementById("btn-solar-mode-compare");
+
+      if (mode === 'single') {
+        if (btnSingle) btnSingle.className = "px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer bg-[#c8ac0c] text-stone-950 shadow-xs";
+        if (btnCompare) btnCompare.className = "px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer text-stone-300 hover:text-white";
+      } else {
+        if (btnSingle) btnSingle.className = "px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer text-stone-300 hover:text-white";
+        if (btnCompare) btnCompare.className = "px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer bg-[#c8ac0c] text-stone-950 shadow-xs";
+      }
+      window.renderSolarCalculator();
+    };
+
+    window.toggleSolarAdvanced = function() {
+      solarShowAdvanced = !solarShowAdvanced;
+      window.renderSolarCalculator();
+    };
+
+    function computeSolarMetrics(monthlyKwh, solarWatts, batteryWh) {
+      const days = solarState.daysInMonth || 30;
+      const dailyKwh = monthlyKwh / days;
+      const amRequirementKwh = dailyKwh * solarState.amRatio;
+      const pmRequirementKwh = dailyKwh * solarState.pmRatio;
+      const pmRequirementWh = pmRequirementKwh * 1000;
+
+      const efficiencyLossWatts = solarWatts * solarState.efficiencyLossRatio;
+      const netPeakWatts = solarWatts - efficiencyLossWatts;
+      const dailyGenWh = netPeakWatts * solarState.peakSunHours;
+      const dailyGenKwh = dailyGenWh / 1000;
+
+      const totalBatteryWh = batteryWh;
+      const totalBatteryKwh = totalBatteryWh / 1000;
+      const reserveRatio = 1 - solarState.dodUsableRatio;
+      const reserveCapacityWh = totalBatteryWh * reserveRatio;
+      const usableCapacityWh = totalBatteryWh * solarState.dodUsableRatio;
+
+      const remainingGridDependencyWh = Math.max(0, pmRequirementWh - usableCapacityWh);
+      const remainingGridDependencyKwh = remainingGridDependencyWh / 1000;
+
+      const isSelfSufficient = remainingGridDependencyWh <= 0;
+
+      return {
+        monthlyKwh,
+        dailyKwh,
+        amRequirementKwh,
+        pmRequirementKwh,
+        pmRequirementWh,
+        solarWatts,
+        efficiencyLossWatts,
+        netPeakWatts,
+        dailyGenWh,
+        dailyGenKwh,
+        totalBatteryWh,
+        totalBatteryKwh,
+        reserveCapacityWh,
+        usableCapacityWh,
+        remainingGridDependencyWh,
+        remainingGridDependencyKwh,
+        isSelfSufficient
+      };
+    }
+
+    window.applyQuickSolarCommand = function(cmd) {
+      if (!cmd) return;
+      const lower = cmd.toLowerCase().trim();
+      
+      const peakMatch = lower.match(/(\d+(\.\d+)?)\s*(peak|sun|hours|hrs)/i) || lower.match(/peak\s*(hours|hrs)?\s*(to|=)?\s*(\d+(\.\d+)?)/i);
+      if (peakMatch) {
+        const val = parseFloat(peakMatch[1] || peakMatch[3] || peakMatch[4]);
+        if (!isNaN(val) && val > 0 && val <= 24) {
+          solarState.peakSunHours = val;
+        }
+      }
+
+      const battKwhMatch = lower.match(/battery\s*(to|=)?\s*(\d+(\.\d+)?)\s*kwh/i) || lower.match(/(\d+(\.\d+)?)\s*kwh\s*battery/i);
+      if (battKwhMatch) {
+        const val = parseFloat(battKwhMatch[2] || battKwhMatch[1]);
+        if (!isNaN(val) && val >= 0) {
+          solarState.batteryWh = val * 1000;
+          solarState.sysA.batteryWh = val * 1000;
+        }
+      } else {
+        const battWhMatch = lower.match(/battery\s*(to|=)?\s*(\d+)\s*wh/i);
+        if (battWhMatch) {
+          const val = parseFloat(battWhMatch[2]);
+          if (!isNaN(val) && val >= 0) {
+            solarState.batteryWh = val;
+            solarState.sysA.batteryWh = val;
+          }
+        }
+      }
+
+      const solarKwMatch = lower.match(/(\d+(\.\d+)?)\s*kw\s*(solar|system)?/i) || lower.match(/solar\s*(to|=)?\s*(\d+(\.\d+)?)\s*kw/i);
+      if (solarKwMatch) {
+        const val = parseFloat(solarKwMatch[1] || solarKwMatch[3]);
+        if (!isNaN(val) && val >= 0) {
+          solarState.solarWatts = val * 1000;
+          solarState.sysA.solarWatts = val * 1000;
+        }
+      } else {
+        const solarWMatch = lower.match(/(\d+)\s*w\s*solar/i) || lower.match(/solar\s*(to|=)?\s*(\d+)\s*w/i);
+        if (solarWMatch) {
+          const val = parseFloat(solarWMatch[1] || solarWMatch[3]);
+          if (!isNaN(val) && val >= 0) {
+            solarState.solarWatts = val;
+            solarState.sysA.solarWatts = val;
+          }
+        }
+      }
+
+      const monthlyMatch = lower.match(/monthly\s*(kwh)?\s*(to|=)?\s*(\d+)/i) || lower.match(/(\d+)\s*kwh\s*monthly/i);
+      if (monthlyMatch) {
+        const val = parseFloat(monthlyMatch[3] || monthlyMatch[1]);
+        if (!isNaN(val) && val > 0) {
+          solarState.monthlyKwh = val;
+        }
+      }
+
+      window.renderSolarCalculator();
+    };
+
+    window.applySolarPreset = function(monthlyKwh, watts, battWh) {
+      solarState.monthlyKwh = monthlyKwh;
+      solarState.solarWatts = watts;
+      solarState.batteryWh = battWh;
+      solarState.sysA.solarWatts = watts;
+      solarState.sysA.batteryWh = battWh;
+      window.renderSolarCalculator();
+    };
+
+    window.updateSolarInput = function(field, value) {
+      const num = parseFloat(value);
+      const safeVal = isNaN(num) ? 0 : num;
+
+      if (field === 'monthlyKwh') solarState.monthlyKwh = safeVal;
+      else if (field === 'solarWatts') solarState.solarWatts = safeVal;
+      else if (field === 'batteryWh') solarState.batteryWh = safeVal;
+      else if (field === 'daysInMonth') solarState.daysInMonth = isNaN(num) || num <= 0 ? 30 : num;
+      else if (field === 'amRatio') solarState.amRatio = isNaN(num) ? 0.40 : num / 100;
+      else if (field === 'pmRatio') solarState.pmRatio = isNaN(num) ? 0.60 : num / 100;
+      else if (field === 'efficiencyLossRatio') solarState.efficiencyLossRatio = isNaN(num) ? 0.15 : num / 100;
+      else if (field === 'peakSunHours') solarState.peakSunHours = isNaN(num) ? 5.0 : num;
+      else if (field === 'dodUsableRatio') solarState.dodUsableRatio = isNaN(num) ? 0.80 : num / 100;
+
+      window.renderSolarCalculator();
+    };
+
+    window.renderSolarCalculator = function(forceRebuild = false) {
+      const container = document.getElementById("solar-calc-modal-body");
+      if (!container) return;
+
+      const m = computeSolarMetrics(solarState.monthlyKwh, solarState.solarWatts, solarState.batteryWh);
+
+      const inputMonthly = document.getElementById("solar-input-monthlyKwh");
+      const inputWatts = document.getElementById("solar-input-solarWatts");
+      const inputBatt = document.getElementById("solar-input-batteryWh");
+
+      // Smooth dynamic update if input DOM elements are already present
+      if (!forceRebuild && inputMonthly && inputWatts && inputBatt) {
+        if (document.activeElement !== inputMonthly) inputMonthly.value = solarState.monthlyKwh || "";
+        if (document.activeElement !== inputWatts) inputWatts.value = solarState.solarWatts || "";
+        if (document.activeElement !== inputBatt) inputBatt.value = solarState.batteryWh || "";
+
+        const outAvgDaily = document.getElementById("solar-out-avg-daily");
+        if (outAvgDaily) outAvgDaily.textContent = `Avg daily load: ${(solarState.monthlyKwh/30).toFixed(1)} kWh/day`;
+
+        const outSolarKw = document.getElementById("solar-out-solar-kw");
+        if (outSolarKw) outSolarKw.textContent = `${(solarState.solarWatts/1000).toFixed(1)} kW`;
+
+        const outSolarDaily = document.getElementById("solar-out-solar-daily");
+        if (outSolarDaily) outSolarDaily.textContent = `Daily solar output: ~${m.dailyGenKwh.toFixed(1)} kWh/day`;
+
+        const outBattKwh = document.getElementById("solar-out-batt-kwh");
+        if (outBattKwh) outBattKwh.textContent = `${(solarState.batteryWh/1000).toFixed(1)} kWh`;
+
+        const outUsableStorage = document.getElementById("solar-out-usable-storage");
+        if (outUsableStorage) outUsableStorage.textContent = `Usable storage: ${(m.usableCapacityWh/1000).toFixed(1)} kWh (80% DoD)`;
+
+        const bannerEl = document.getElementById("solar-out-banner");
+        if (bannerEl) {
+          bannerEl.className = `p-5 rounded-2xl border ${m.isSelfSufficient ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-amber-50 border-amber-200 text-amber-950'} flex flex-col md:flex-row items-start md:items-center justify-between gap-4`;
+          bannerEl.innerHTML = `
+            <div class="flex items-center gap-3.5">
+              <div class="p-3 rounded-xl ${m.isSelfSufficient ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'} shrink-0">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  ${m.isSelfSufficient 
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />'
+                  }
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-display font-black text-base uppercase tracking-tight">
+                  ${m.isSelfSufficient ? '⚡ Fully Self-Sufficient' : '🔌 Nighttime Grid Import Required'}
+                </h4>
+                <p class="text-xs font-sans mt-0.5 opacity-90">
+                  ${m.isSelfSufficient
+                    ? `Battery capacity (${(m.totalBatteryWh/1000).toFixed(1)} kWh) easily satisfies night requirement (${m.pmRequirementKwh.toFixed(1)} kWh/day).`
+                    : `Usable battery (${(m.usableCapacityWh/1000).toFixed(1)} kWh) leaves ${m.remainingGridDependencyKwh.toFixed(1)} kWh/day needed from the grid at night.`
+                  }
+                </p>
+              </div>
+            </div>
+
+            <div class="text-right shrink-0 self-end md:self-center">
+              <span class="text-[10px] font-mono uppercase tracking-wider block opacity-75">Night Coverage</span>
+              <span class="text-lg font-mono font-bold">
+                ${m.isSelfSufficient ? '100% Off-Grid' : `${m.pmRequirementWh > 0 ? Math.round((m.usableCapacityWh / m.pmRequirementWh) * 100) : 0}% Battery Covered`}
+              </span>
+            </div>
+          `;
+        }
+
+        const b1 = document.getElementById("solar-out-breakdown-1");
+        if (b1) {
+          b1.innerHTML = `
+            <h4 class="font-display font-black text-xs text-stone-900 uppercase tracking-tight border-b border-stone-100 pb-2">
+              1. Daily Power Balance
+            </h4>
+            <div class="space-y-2.5 text-xs text-stone-700">
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Monthly Usage:</span>
+                <span class="font-mono font-bold text-stone-900">${m.monthlyKwh.toLocaleString()} kWh/mo</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Average Daily Load:</span>
+                <span class="font-mono font-bold text-stone-900">${m.dailyKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Daytime (AM) Load (40%):</span>
+                <span class="font-mono font-bold text-amber-700">${m.amRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Nighttime (PM) Load (60%):</span>
+                <span class="font-mono font-bold text-indigo-700">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-stone-500">Est. Daily Solar Generation:</span>
+                <span class="font-mono font-bold text-emerald-800">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
+              </div>
+            </div>
+          `;
+        }
+
+        const b2 = document.getElementById("solar-out-breakdown-2");
+        if (b2) {
+          b2.innerHTML = `
+            <h4 class="font-display font-black text-xs text-stone-900 uppercase tracking-tight border-b border-stone-100 pb-2">
+              2. Battery Storage Performance
+            </h4>
+            <div class="space-y-2.5 text-xs text-stone-700">
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Installed Battery Capacity:</span>
+                <span class="font-mono font-bold text-stone-900">${(m.totalBatteryWh/1000).toFixed(1)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Usable Battery (80% DoD):</span>
+                <span class="font-mono font-bold text-indigo-700">${(m.usableCapacityWh/1000).toFixed(2)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Reserve Capacity (20% Buffer):</span>
+                <span class="font-mono font-bold text-stone-500">${(m.reserveCapacityWh/1000).toFixed(2)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Nighttime Energy Needed:</span>
+                <span class="font-mono font-bold text-stone-900">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-stone-500">Grid Import Required:</span>
+                <span class="font-mono font-black ${m.remainingGridDependencyKwh > 0 ? 'text-rose-600' : 'text-emerald-700'}">
+                  ${m.remainingGridDependencyKwh.toFixed(2)} kWh/day
+                </span>
+              </div>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      container.innerHTML = `
+        <!-- 1. System Inputs (Clean Card) -->
+        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-5">
+          <div class="pb-3 border-b border-stone-100">
+            <h3 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight">System Parameters</h3>
+            <p class="text-xs text-stone-500 mt-0.5">Adjust monthly electric usage, solar capacity, and battery storage</p>
+          </div>
+
+          <!-- 3 Main Inputs -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+              <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Monthly Electric Bill</label>
+              <div class="relative">
+                <input 
+                  id="solar-input-monthlyKwh"
+                  type="number" 
+                  min="0"
+                  step="any"
+                  value="${solarState.monthlyKwh || ''}" 
+                  oninput="window.updateSolarInput('monthlyKwh', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">kWh/mo</span>
+              </div>
+              <p id="solar-out-avg-daily" class="text-[11px] text-stone-500 font-sans">Avg daily load: ${(solarState.monthlyKwh/30).toFixed(1)} kWh/day</p>
+            </div>
+
+            <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Solar Panels</label>
+                <span id="solar-out-solar-kw" class="text-xs font-mono font-bold text-emerald-700">${(solarState.solarWatts/1000).toFixed(1)} kW</span>
+              </div>
+              <div class="relative">
+                <input 
+                  id="solar-input-solarWatts"
+                  type="number" 
+                  min="0"
+                  step="any"
+                  value="${solarState.solarWatts || ''}" 
+                  oninput="window.updateSolarInput('solarWatts', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">Watts</span>
+              </div>
+              <p id="solar-out-solar-daily" class="text-[11px] text-stone-500 font-sans">Daily solar output: ~${m.dailyGenKwh.toFixed(1)} kWh/day</p>
+            </div>
+
+            <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Battery Capacity</label>
+                <span id="solar-out-batt-kwh" class="text-xs font-mono font-bold text-emerald-700">${(solarState.batteryWh/1000).toFixed(1)} kWh</span>
+              </div>
+              <div class="relative">
+                <input 
+                  id="solar-input-batteryWh"
+                  type="number" 
+                  min="0"
+                  step="any"
+                  value="${solarState.batteryWh || ''}" 
+                  oninput="window.updateSolarInput('batteryWh', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">Wh</span>
+              </div>
+              <p id="solar-out-usable-storage" class="text-[11px] text-stone-500 font-sans">Usable storage: ${(m.usableCapacityWh/1000).toFixed(1)} kWh (80% DoD)</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Hero Feasibility Summary Banner -->
+        <div id="solar-out-banner" class="p-5 rounded-2xl border ${m.isSelfSufficient ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-amber-50 border-amber-200 text-amber-950'} flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="p-3 rounded-xl ${m.isSelfSufficient ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'} shrink-0">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                ${m.isSelfSufficient 
+                  ? '<path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />'
+                  : '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />'
+                }
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-display font-black text-base uppercase tracking-tight">
+                ${m.isSelfSufficient ? '⚡ Fully Self-Sufficient' : '🔌 Nighttime Grid Import Required'}
+              </h4>
+              <p class="text-xs font-sans mt-0.5 opacity-90">
+                ${m.isSelfSufficient
+                  ? `Battery capacity (${(m.totalBatteryWh/1000).toFixed(1)} kWh) easily satisfies night requirement (${m.pmRequirementKwh.toFixed(1)} kWh/day).`
+                  : `Usable battery (${(m.usableCapacityWh/1000).toFixed(1)} kWh) leaves ${m.remainingGridDependencyKwh.toFixed(1)} kWh/day needed from the grid at night.`
+                }
+              </p>
+            </div>
+          </div>
+
+          <div class="text-right shrink-0 self-end md:self-center">
+            <span class="text-[10px] font-mono uppercase tracking-wider block opacity-75">Night Coverage</span>
+            <span class="text-lg font-mono font-bold">
+              ${m.isSelfSufficient ? '100% Off-Grid' : `${m.pmRequirementWh > 0 ? Math.round((m.usableCapacityWh / m.pmRequirementWh) * 100) : 0}% Battery Covered`}
+            </span>
+          </div>
+        </div>
+
+        <!-- 3. Clean Breakdown Summary -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div id="solar-out-breakdown-1" class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-4">
+            <h4 class="font-display font-black text-xs text-stone-900 uppercase tracking-tight border-b border-stone-100 pb-2">
+              1. Daily Power Balance
+            </h4>
+            <div class="space-y-2.5 text-xs text-stone-700">
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Monthly Usage:</span>
+                <span class="font-mono font-bold text-stone-900">${m.monthlyKwh.toLocaleString()} kWh/mo</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Average Daily Load:</span>
+                <span class="font-mono font-bold text-stone-900">${m.dailyKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Daytime (AM) Load (40%):</span>
+                <span class="font-mono font-bold text-amber-700">${m.amRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Nighttime (PM) Load (60%):</span>
+                <span class="font-mono font-bold text-indigo-700">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-stone-500">Est. Daily Solar Generation:</span>
+                <span class="font-mono font-bold text-emerald-800">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="solar-out-breakdown-2" class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-4">
+            <h4 class="font-display font-black text-xs text-stone-900 uppercase tracking-tight border-b border-stone-100 pb-2">
+              2. Battery Storage Performance
+            </h4>
+            <div class="space-y-2.5 text-xs text-stone-700">
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Installed Battery Capacity:</span>
+                <span class="font-mono font-bold text-stone-900">${(m.totalBatteryWh/1000).toFixed(1)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Usable Battery (80% DoD):</span>
+                <span class="font-mono font-bold text-indigo-700">${(m.usableCapacityWh/1000).toFixed(2)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Reserve Capacity (20% Buffer):</span>
+                <span class="font-mono font-bold text-stone-500">${(m.reserveCapacityWh/1000).toFixed(2)} kWh</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-stone-50">
+                <span class="text-stone-500">Nighttime Energy Needed:</span>
+                <span class="font-mono font-bold text-stone-900">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-stone-500">Grid Import Required:</span>
+                <span class="font-mono font-black ${m.remainingGridDependencyKwh > 0 ? 'text-rose-600' : 'text-emerald-700'}">
+                  ${m.remainingGridDependencyKwh.toFixed(2)} kWh/day
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    window.copySolarProposalSummary = function() {
+      const m = computeSolarMetrics(solarState.monthlyKwh, solarState.solarWatts, solarState.batteryWh);
+      const text = `SOLAR & BATTERY SIZING SUMMARY (PowerShift)
+==================================================
+
+1. Consumption Profile
+* Monthly Consumption: ${m.monthlyKwh.toLocaleString()} kWh
+* Daily Usage: ${m.dailyKwh.toFixed(2)} kWh/day
+* Daytime (AM) Requirement: ${m.amRequirementKwh.toFixed(2)} kWh/day (${(solarState.amRatio*100).toFixed(0)}%)
+* Nighttime (PM) Requirement: ${m.pmRequirementKwh.toFixed(2)} kWh/day / ${Math.round(m.pmRequirementWh).toLocaleString()} Wh/day (${(solarState.pmRatio*100).toFixed(0)}%)
+
+2. Solar Generation Performance
+* Solar System Design: ${m.solarWatts.toLocaleString()} Watts
+* Efficiency Losses (${(solarState.efficiencyLossRatio*100).toFixed(0)}%): -${Math.round(m.efficiencyLossWatts).toLocaleString()} Watts
+* Net Peak Output: ${Math.round(m.netPeakWatts).toLocaleString()} Watts
+* Estimated Daily Solar Generation: ${Math.round(m.dailyGenWh).toLocaleString()} Wh/day (${m.dailyGenKwh.toFixed(2)} kWh/day)
+
+3. Battery Storage & Grid Dependency
+* Total Battery Installed: ${m.totalBatteryWh.toLocaleString()} Wh (${m.totalBatteryKwh.toFixed(1)} kWh)
+* System Reserve (${((1-solarState.dodUsableRatio)*100).toFixed(0)}% Buffer): ${Math.round(m.reserveCapacityWh).toLocaleString()} Wh
+* Usable Battery Capacity (${(solarState.dodUsableRatio*100).toFixed(0)}%): ${Math.round(m.usableCapacityWh).toLocaleString()} Wh
+* Remaining Grid Dependency (Night): ${Math.round(m.remainingGridDependencyWh).toLocaleString()} Wh/day (${m.remainingGridDependencyKwh.toFixed(2)} kWh/day)
+* Energy Status: ${m.isSelfSufficient ? 'Fully Self-Sufficient (100% Night Covered)' : `Grid Import Required (${m.remainingGridDependencyKwh.toFixed(2)} kWh/day imported from grid)`}
+`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        if (typeof triggerToast === "function") {
+          triggerToast("Proposal summary copied to clipboard!", "success");
+        } else {
+          alert("Proposal summary copied to clipboard!");
+        }
+      }).catch(err => {
+        console.error("Failed to copy:", err);
+      });
+    };
+
+    window.copySolarCalculatorLink = function() {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tool", "solar-calculator");
+      const publicUrl = url.toString();
+
+      const notifyCopied = () => {
+        if (typeof triggerToast === "function") {
+          triggerToast("Standalone Calculator Link copied to clipboard!", "success");
+        } else {
+          alert("Calculator standalone link copied to clipboard!\n\n" + publicUrl);
+        }
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(publicUrl).then(() => {
+          notifyCopied();
+        }).catch(() => {
+          fallbackCopyCalcUrl(publicUrl);
+        });
+      } else {
+        fallbackCopyCalcUrl(publicUrl);
+      }
+    };
+
+    function fallbackCopyCalcUrl(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        if (typeof triggerToast === "function") {
+          triggerToast("Standalone Calculator Link copied to clipboard!", "success");
+        } else {
+          alert("Calculator standalone link copied to clipboard!");
+        }
+      } catch (err) {
+        console.error('Fallback copy failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
 
     window.addEventListener("resize", () => {
       if (currentTab === "overview") {
