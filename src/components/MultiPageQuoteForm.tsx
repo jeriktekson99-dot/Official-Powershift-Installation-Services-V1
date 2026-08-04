@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { jsPDF } from 'jspdf';
+import { POWERSHIFT_LOGO_BASE64 } from '../lib/logo';
 import {
   Building2,
   User,
@@ -458,17 +459,13 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.rect(0, 0, 210, 35, 'F');
       
-      // Header Title
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("Helvetica", "bold");
-      doc.setFontSize(22);
-      doc.text("POWERSHIFT SOLAR", 15, 17);
-      
-      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-      doc.setFontSize(10);
-      doc.setFont("Helvetica", "bold");
-      doc.text("SYSTEM SIZING & INVESTMENT ESTIMATE", 15, 25);
-      
+      // Header Logo
+      try {
+        doc.addImage(POWERSHIFT_LOGO_BASE64, 'PNG', 12, 6, 48, 22);
+      } catch (e) {
+        console.warn("Logo rendering error in MultiPageQuoteForm PDF:", e);
+      }
+
       // Watermark/Metadata
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(8);
