@@ -5281,16 +5281,27 @@
     function getRecommendedPackage(monthlyKwh) {
       const days = solarState.daysInMonth || 30;
       const dailyKwh = monthlyKwh / days;
+      const dailyWh = dailyKwh * 1000;
       const peakHours = solarState.peakSunHours || 5.0;
       const effLoss = solarState.efficiencyLossRatio || 0.15;
       
-      // Net PV kW required to meet daily load
-      const reqKwExact = (dailyKwh * 1000) / (peakHours * (1 - effLoss) * 1000);
-      let recKw = Math.ceil(reqKwExact);
-      if (recKw < 3) recKw = 3;
+      // Add 15% efficiency loss buffer to daily load requirement (e.g. 4,000 Wh + 15% = 4,600 Wh)
+      const lossBufferWh = dailyWh * effLoss;
+      const bufferedDailyWh = dailyWh + lossBufferWh; // dailyWh * (1 + effLoss)
+      const bufferedDailyKwh = bufferedDailyWh / 1000;
 
-      // Nighttime battery storage needed in kWh
-      const nightKwh = dailyKwh * (solarState.pmRatio || 0.60);
+      // Calculate required PV capacity accounting for daily buffered load and peak sun hours derating
+      const rawRequiredKw = bufferedDailyWh / (peakHours * (1 - effLoss) * 1000);
+      
+      // Always add 15% loss margin to recommended capacity
+      const reqKwWithMargin = rawRequiredKw * (1 + effLoss);
+      
+      let recKw = Math.ceil(reqKwWithMargin);
+      // Ensure minimum system package size floor is 5 kW
+      if (recKw < 5) recKw = 5;
+
+      // Nighttime battery storage needed in kWh with 15% efficiency loss buffer
+      const nightKwh = (dailyKwh * (solarState.pmRatio || 0.60)) * (1 + effLoss);
       const recBattKwh = Math.round((nightKwh / (solarState.dodUsableRatio || 0.80)) * 10) / 10;
 
       // Match against db.packages if present
@@ -5300,13 +5311,27 @@
         window.db.packages.forEach(pkg => {
           const pkgCap = parseFloat((pkg.capacity || pkg.tier || '0').replace(/[^0-9.]/g, ''));
           if (!isNaN(pkgCap) && pkgCap > 0) {
-            const diff = Math.abs(pkgCap - reqKwExact);
-            if (diff < minDiff) {
-              minDiff = diff;
-              matchedDbPkg = pkg;
+            if (pkgCap >= recKw) {
+              const diff = pkgCap - recKw;
+              if (diff < minDiff) {
+                minDiff = diff;
+                matchedDbPkg = pkg;
+              }
             }
           }
         });
+
+        // Fallback if all packages are smaller than recKw
+        if (!matchedDbPkg) {
+          let maxCap = -1;
+          window.db.packages.forEach(pkg => {
+            const pkgCap = parseFloat((pkg.capacity || pkg.tier || '0').replace(/[^0-9.]/g, ''));
+            if (pkgCap > maxCap) {
+              maxCap = pkgCap;
+              matchedDbPkg = pkg;
+            }
+          });
+        }
       }
 
       let pkgName = matchedDbPkg ? matchedDbPkg.name : `${recKw}KW HYBRID PACKAGE`;
@@ -5333,7 +5358,11 @@
         estMonthlySavings,
         estAnnualSavings,
         estPaybackYears,
-        reqKwExact,
+        reqKwExact: reqKwWithMargin,
+        dailyWh,
+        lossBufferWh,
+        bufferedDailyWh,
+        bufferedDailyKwh,
         dailyKwh,
         monthlyBill
       };
@@ -5509,6 +5538,77 @@
       window.renderSolarCalculator(true);
     };
 
+    window.applyTariffAndUsageChanges = function() {
+      const rateInput = document.getElementById("solar-input-elecRate");
+      const monthlyInput = document.getElementById("solar-input-monthlyKwh");
+      const billInput = document.getElementById("solar-input-billAmount");
+      const wattsInput = document.getElementById("solar-input-solarWatts");
+      const battInput = document.getElementById("solar-input-batteryWh");
+      const pmInput = document.getElementById("solar-input-pmRatio");
+
+      if (rateInput && rateInput.value !== "") {
+        const r = parseFloat(rateInput.value);
+        solarState.elecRate = !isNaN(r) && r >= 0 ? r : 12.00;
+      }
+
+      if (solarState.inputMode === 'kwh') {
+        if (monthlyInput && monthlyInput.value !== "") {
+          const k = parseFloat(monthlyInput.value);
+          solarState.monthlyKwh = !isNaN(k) && k >= 0 ? k : 0;
+          solarState.billAmount = solarState.monthlyKwh * solarState.elecRate;
+        }
+      } else {
+        if (billInput && billInput.value !== "") {
+          const b = parseFloat(billInput.value);
+          solarState.billAmount = !isNaN(b) && b >= 0 ? b : 0;
+          solarState.monthlyKwh = solarState.elecRate > 0 ? solarState.billAmount / solarState.elecRate : 0;
+        }
+      }
+
+      if (wattsInput && wattsInput.value !== "") {
+        const w = parseFloat(wattsInput.value);
+        if (!isNaN(w) && w >= 0) {
+          solarState.solarWatts = w * 1000;
+          if (solarState.sysA) solarState.sysA.solarWatts = solarState.solarWatts;
+        }
+      } else if (solarState.monthlyKwh > 0) {
+        const rec = getRecommendedPackage(solarState.monthlyKwh);
+        if (rec && rec.pkgCapacityKw) {
+          solarState.solarWatts = rec.pkgCapacityKw * 1000;
+          if (solarState.sysA) solarState.sysA.solarWatts = solarState.solarWatts;
+        }
+      }
+
+      if (battInput && battInput.value !== "") {
+        const batt = parseFloat(battInput.value);
+        if (!isNaN(batt) && batt >= 0) {
+          solarState.batteryWh = batt * 1000;
+          if (solarState.sysA) solarState.sysA.batteryWh = solarState.batteryWh;
+        }
+      } else if (solarState.monthlyKwh > 0) {
+        const rec = getRecommendedPackage(solarState.monthlyKwh);
+        if (rec && rec.recBattKwh) {
+          solarState.batteryWh = rec.recBattKwh * 1000;
+          if (solarState.sysA) solarState.sysA.batteryWh = solarState.batteryWh;
+        }
+      }
+
+      if (pmInput && pmInput.value !== "") {
+        const pm = parseFloat(pmInput.value);
+        if (!isNaN(pm)) {
+          const safePm = Math.min(100, Math.max(0, pm));
+          solarState.pmRatio = safePm / 100;
+          solarState.amRatio = (100 - safePm) / 100;
+        }
+      }
+
+      if (typeof triggerToast === "function") {
+        triggerToast("Tariff & usage changes applied successfully!", "success");
+      }
+
+      window.renderSolarCalculator(true);
+    };
+
     window.updateSolarInput = function(field, value) {
       const num = parseFloat(value);
       const safeVal = isNaN(num) ? 0 : num;
@@ -5530,8 +5630,14 @@
           solarState.billAmount = solarState.monthlyKwh * safeVal;
         }
       }
-      else if (field === 'solarWatts') solarState.solarWatts = safeVal;
-      else if (field === 'batteryWh') solarState.batteryWh = safeVal;
+      else if (field === 'solarWatts') {
+        solarState.solarWatts = safeVal * 1000;
+        if (solarState.sysA) solarState.sysA.solarWatts = solarState.solarWatts;
+      }
+      else if (field === 'batteryWh') {
+        solarState.batteryWh = safeVal * 1000;
+        if (solarState.sysA) solarState.sysA.batteryWh = solarState.batteryWh;
+      }
       else if (field === 'daysInMonth') solarState.daysInMonth = isNaN(num) || num <= 0 ? 30 : num;
       else if (field === 'amRatio') {
         const val = isNaN(num) ? 40 : Math.min(100, Math.max(0, num));
@@ -5546,8 +5652,6 @@
       else if (field === 'efficiencyLossRatio') solarState.efficiencyLossRatio = isNaN(num) ? 0.15 : num / 100;
       else if (field === 'peakSunHours') solarState.peakSunHours = isNaN(num) ? 5.0 : num;
       else if (field === 'dodUsableRatio') solarState.dodUsableRatio = isNaN(num) ? 0.80 : num / 100;
-
-      window.renderSolarCalculator();
     };
 
     window.renderSolarCalculator = function(forceRebuild = false) {
@@ -5560,16 +5664,55 @@
       const inputWatts = document.getElementById("solar-input-solarWatts");
       const inputBatt = document.getElementById("solar-input-batteryWh");
       const inputClient = document.getElementById("solar-input-clientName");
+      const inputRate = document.getElementById("solar-input-elecRate");
+
+      const hasInputsInDom = !!(inputRate || inputWatts || inputMonthly);
 
       // Smooth dynamic update if input DOM elements are already present
-      if (!forceRebuild && inputMonthly && inputWatts && inputBatt) {
+      if (!forceRebuild && hasInputsInDom) {
         if (inputClient && document.activeElement !== inputClient) inputClient.value = solarState.clientName || "";
-        if (document.activeElement !== inputMonthly) inputMonthly.value = solarState.monthlyKwh || "";
-        if (document.activeElement !== inputWatts) inputWatts.value = solarState.solarWatts || "";
-        if (document.activeElement !== inputBatt) inputBatt.value = solarState.batteryWh || "";
+        if (inputRate && document.activeElement !== inputRate) inputRate.value = solarState.elecRate || "";
+        if (inputMonthly && document.activeElement !== inputMonthly) inputMonthly.value = solarState.monthlyKwh || "";
+        
+        const inputBill = document.getElementById("solar-input-billAmount");
+        if (inputBill && document.activeElement !== inputBill) inputBill.value = solarState.billAmount || "";
+
+        if (inputWatts && document.activeElement !== inputWatts) {
+          inputWatts.value = solarState.solarWatts > 0 ? (solarState.solarWatts / 1000) : "";
+        }
+        if (inputBatt && document.activeElement !== inputBatt) {
+          inputBatt.value = solarState.batteryWh > 0 ? (solarState.batteryWh / 1000) : "";
+        }
 
         const inputPmMain = document.getElementById("solar-input-pmRatio");
         if (inputPmMain && document.activeElement !== inputPmMain) inputPmMain.value = Math.round(solarState.pmRatio * 100);
+
+        const outDailyHead = document.getElementById("solar-out-daily-kwh-head");
+        if (outDailyHead) outDailyHead.textContent = `${m.dailyKwh.toFixed(1)} kWh/day`;
+
+        const outCalcBillBox = document.getElementById("solar-out-calc-bill-box");
+        if (outCalcBillBox) {
+          outCalcBillBox.innerHTML = `
+            <span class="text-[10px] font-mono font-bold text-emerald-800 uppercase tracking-wider block">Calculated Monthly Bill</span>
+            <div class="text-2xl font-mono font-black text-emerald-950">
+              ₱${m.monthlyBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-xs font-normal text-emerald-800">/ mo</span>
+            </div>
+            <p class="text-[11px] text-emerald-700 font-sans">Formula: ${solarState.monthlyKwh.toLocaleString()} kWh × ₱${(solarState.elecRate||12).toFixed(2)}/kWh</p>
+          `;
+        }
+
+        const outConvKwhBox = document.getElementById("solar-out-conv-kwh-box");
+        if (outConvKwhBox) {
+          outConvKwhBox.innerHTML = `
+            <span class="text-[10px] font-mono font-bold text-indigo-900 uppercase tracking-wider block">Converted Electric Usage</span>
+            <div class="text-2xl font-mono font-black text-indigo-950">
+              ${m.monthlyKwh.toFixed(1)} <span class="text-xs font-normal text-indigo-800">kWh / month</span>
+            </div>
+            <p class="text-[11px] text-indigo-800 font-mono font-medium">
+              Formula: kWh = ₱${(solarState.billAmount||0).toLocaleString()} ÷ ₱${(solarState.elecRate||12).toFixed(2)} = ${m.monthlyKwh.toFixed(1)} kWh
+            </p>
+          `;
+        }
 
         const outAvgDaily = document.getElementById("solar-out-avg-daily");
         if (outAvgDaily) outAvgDaily.textContent = `Avg daily load: ${(solarState.monthlyKwh/30).toFixed(1)} kWh/day`;
@@ -5838,24 +5981,40 @@
                 </svg>
                 Electricity Tariff & Usage Configuration
               </h3>
-              <p class="text-xs text-stone-500 mt-0.5">Define electricity rate per kWh, enter usage in kWh or total bill amount (₱), and select standard baseline presets</p>
+              <p class="text-xs text-stone-500 mt-0.5">Define electricity rate per kWh, enter usage in kWh or total bill amount (₱), and click Apply</p>
             </div>
 
-            <!-- Mode Selector Tabs -->
-            <div class="flex items-center gap-1 bg-stone-100 p-1 rounded-xl shrink-0 self-start sm:self-auto border border-stone-200">
+            <!-- Controls: Mode Selector & Apply Button -->
+            <div class="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">
+              <!-- Mode Selector Tabs -->
+              <div class="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
+                <button 
+                  type="button" 
+                  onclick="window.setSolarInputMode('kwh')"
+                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'kwh' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                >
+                  ⚡ kWh Usage Mode
+                </button>
+                <button 
+                  type="button" 
+                  onclick="window.setSolarInputMode('bill')"
+                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'bill' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                >
+                  ₱ Bill Amount Mode
+                </button>
+              </div>
+
+              <!-- APPLY BUTTON -->
               <button 
                 type="button" 
-                onclick="window.setSolarInputMode('kwh')"
-                class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'kwh' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                onclick="window.applyTariffAndUsageChanges()"
+                class="px-4 py-2 rounded-xl bg-[#05300a] hover:bg-[#084214] active:scale-95 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+                title="Apply entered tariff and usage values to update proposal calculations"
               >
-                ⚡ kWh Usage Mode
-              </button>
-              <button 
-                type="button" 
-                onclick="window.setSolarInputMode('bill')"
-                class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'bill' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
-              >
-                ₱ Bill Amount Mode
+                <svg class="w-4 h-4 text-[#c8ac0c] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Apply</span>
               </button>
             </div>
           </div>
@@ -5878,6 +6037,7 @@
                   step="0.01"
                   value="${solarState.elecRate || ''}" 
                   oninput="window.updateSolarInput('elecRate', this.value)"
+                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                   class="w-full bg-white border border-stone-300 rounded-lg pl-8 pr-16 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#05300a]"
                 />
                 <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">/ kWh</span>
@@ -5890,7 +6050,7 @@
               <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
                 <div class="flex items-center justify-between">
                   <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Monthly Electric Usage</label>
-                  <span class="text-xs font-mono font-bold text-[#05300a]">${m.dailyKwh.toFixed(1)} kWh/day</span>
+                  <span id="solar-out-daily-kwh-head" class="text-xs font-mono font-bold text-[#05300a]">${m.dailyKwh.toFixed(1)} kWh/day</span>
                 </div>
                 <div class="relative">
                   <input 
@@ -5900,6 +6060,7 @@
                     step="any"
                     value="${solarState.monthlyKwh || ''}" 
                     oninput="window.updateSolarInput('monthlyKwh', this.value)"
+                    onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                     class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-[#05300a]"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">kWh/mo</span>
@@ -5908,7 +6069,7 @@
               </div>
 
               <!-- Calculated Bill Preview Box -->
-              <div class="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 space-y-1.5 flex flex-col justify-between">
+              <div id="solar-out-calc-bill-box" class="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 space-y-1.5 flex flex-col justify-between">
                 <span class="text-[10px] font-mono font-bold text-emerald-800 uppercase tracking-wider block">Calculated Monthly Bill</span>
                 <div class="text-2xl font-mono font-black text-emerald-950">
                   ₱${m.monthlyBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span class="text-xs font-normal text-emerald-800">/ mo</span>
@@ -5930,6 +6091,7 @@
                     step="any"
                     value="${solarState.billAmount || ''}" 
                     oninput="window.updateSolarInput('billAmount', this.value)"
+                    onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                     class="w-full bg-white border border-stone-300 rounded-lg pl-8 pr-14 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">/ mo</span>
@@ -5938,7 +6100,7 @@
               </div>
 
               <!-- Converted kWh Box (Conditional Logic Notice) -->
-              <div class="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 space-y-1.5 flex flex-col justify-between">
+              <div id="solar-out-conv-kwh-box" class="bg-indigo-50/70 p-4 rounded-xl border border-indigo-200 space-y-1.5 flex flex-col justify-between">
                 <span class="text-[10px] font-mono font-bold text-indigo-900 uppercase tracking-wider block">Converted Electric Usage</span>
                 <div class="text-2xl font-mono font-black text-indigo-950">
                   ${m.monthlyKwh.toFixed(1)} <span class="text-xs font-normal text-indigo-800">kWh / month</span>
@@ -5950,109 +6112,6 @@
             `}
 
           </div>
-
-          <!-- Quick Standard Baseline Presets Bar (Including 16 kWh Daily Baseline) -->
-          <div class="pt-3 border-t border-stone-100 flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-mono font-bold text-stone-600 uppercase tracking-wider">Quick Baseline Presets:</span>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <button 
-                type="button" 
-                onclick="window.applySolarBaselinePreset(16)"
-                class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-mono font-bold transition-all cursor-pointer shadow-3xs"
-                title="16 kWh/day baseline load (~480 kWh/month)"
-              >
-                ⚡ 16 kWh/day Baseline (480 kWh/mo)
-              </button>
-              <button 
-                type="button" 
-                onclick="window.applySolarBaselinePreset(20)"
-                class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 text-xs font-mono font-bold transition-all cursor-pointer"
-              >
-                20 kWh/day (600 kWh/mo)
-              </button>
-              <button 
-                type="button" 
-                onclick="window.applySolarBaselinePreset(30)"
-                class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 text-xs font-mono font-bold transition-all cursor-pointer"
-              >
-                30 kWh/day (900 kWh/mo)
-              </button>
-              <button 
-                type="button" 
-                onclick="window.applySolarBaselinePreset(50)"
-                class="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 text-xs font-mono font-bold transition-all cursor-pointer"
-              >
-                50 kWh/day Commercial (1,500 kWh/mo)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. Automatic Power / Solar System Package Recommendation Card -->
-        <div class="bg-gradient-to-r from-[#05300a] via-[#084214] to-[#042808] p-6 rounded-3xl border-2 border-[#c8ac0c]/40 text-white shadow-md space-y-4">
-          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-3 border-b border-white/10">
-            <div class="flex items-center gap-3">
-              <div class="p-3 rounded-2xl bg-[#c8ac0c] text-stone-950 shrink-0 shadow-sm">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-              </div>
-              <div>
-                <span class="text-[10px] font-mono font-black text-[#c8ac0c] uppercase tracking-widest block">SYSTEM PACKAGE RECOMMENDATION</span>
-                <h3 class="font-display font-black text-xl text-white uppercase tracking-tight mt-0.5">
-                  ${m.recommendedPkg.pkgName}
-                </h3>
-              </div>
-            </div>
-
-            <button 
-              type="button" 
-              onclick="window.applyRecommendedPackage(${m.recommendedPkg.pkgCapacityKw}, ${m.recommendedPkg.recBattKwh})"
-              class="px-5 py-3 rounded-2xl bg-[#c8ac0c] hover:bg-[#d9bb10] text-stone-950 font-mono font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-md hover:scale-[1.02] shrink-0 self-stretch md:self-auto justify-center"
-            >
-              <svg class="w-4 h-4 text-stone-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span>APPLY RECOMMENDED SIZING</span>
-            </button>
-          </div>
-
-          <!-- Specs & Financial Projections Grid -->
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-1">
-            <div class="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 space-y-1">
-              <span class="text-[10px] font-mono font-bold text-stone-300 uppercase tracking-wider block">Solar Array Capacity</span>
-              <div class="text-lg font-mono font-black text-[#c8ac0c]">
-                ${m.recommendedPkg.pkgCapacityKw} kW PV Panel
-              </div>
-              <span class="text-[10px] text-stone-300 block">Required: ${m.recommendedPkg.reqKwExact.toFixed(1)} kW</span>
-            </div>
-
-            <div class="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 space-y-1">
-              <span class="text-[10px] font-mono font-bold text-stone-300 uppercase tracking-wider block">Battery Storage</span>
-              <div class="text-lg font-mono font-black text-emerald-300">
-                ${m.recommendedPkg.recBattKwh} kWh Storage
-              </div>
-              <span class="text-[10px] text-stone-300 block">Night Load: ${m.pmRequirementKwh.toFixed(1)} kWh</span>
-            </div>
-
-            <div class="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 space-y-1">
-              <span class="text-[10px] font-mono font-bold text-stone-300 uppercase tracking-wider block">Est. Monthly Savings</span>
-              <div class="text-lg font-mono font-black text-white">
-                ₱${m.recommendedPkg.estMonthlySavings.toLocaleString('en-US', { maximumFractionDigits: 0 })} / mo
-              </div>
-              <span class="text-[10px] text-emerald-300 block">Annual: ₱${m.recommendedPkg.estAnnualSavings.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-            </div>
-
-            <div class="bg-white/10 backdrop-blur-xs p-3.5 rounded-2xl border border-white/10 space-y-1">
-              <span class="text-[10px] font-mono font-bold text-stone-300 uppercase tracking-wider block">Est. Payback Period</span>
-              <div class="text-lg font-mono font-black text-[#c8ac0c]">
-                ${m.recommendedPkg.estPaybackYears} Years
-              </div>
-              <span class="text-[10px] text-stone-300 block">Hybrid Package Est.</span>
-            </div>
-          </div>
         </div>
 
         <!-- 3. System Hardware Parameters (Adjustable Array & Battery Inputs) -->
@@ -6062,13 +6121,19 @@
               <h3 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight">Active Hardware Configuration</h3>
               <p class="text-xs text-stone-500 mt-0.5">Custom adjustment for installed solar panels, battery capacity, and nighttime allocation percentage</p>
             </div>
-            <button 
-              type="button" 
-              onclick="window.toggleSolarAdvanced()" 
-              class="text-[11px] font-mono font-bold text-[#05300a] hover:underline cursor-pointer"
-            >
-              ${solarShowAdvanced ? 'Hide Advanced Config ▲' : 'Advanced Configuration Options ▼'}
-            </button>
+            <div class="flex items-center gap-3">
+              <button 
+                type="button" 
+                onclick="window.applyTariffAndUsageChanges()"
+                class="px-4 py-2 rounded-xl bg-[#05300a] hover:bg-[#084214] active:scale-95 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+                title="Apply entered hardware values to update proposal calculations"
+              >
+                <svg class="w-4 h-4 text-[#c8ac0c] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Apply</span>
+              </button>
+            </div>
           </div>
 
           <!-- 3 Hardware Inputs -->
@@ -6084,11 +6149,12 @@
                   type="number" 
                   min="0"
                   step="any"
-                  value="${solarState.solarWatts || ''}" 
+                  value="${solarState.solarWatts > 0 ? (solarState.solarWatts / 1000) : ''}" 
                   oninput="window.updateSolarInput('solarWatts', this.value)"
+                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                   class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">Watts</span>
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">kW</span>
               </div>
               <p id="solar-out-solar-daily" class="text-[11px] text-stone-500 font-sans">Daily solar output: ~${m.dailyGenKwh.toFixed(1)} kWh/day</p>
             </div>
@@ -6104,11 +6170,12 @@
                   type="number" 
                   min="0"
                   step="any"
-                  value="${solarState.batteryWh || ''}" 
+                  value="${solarState.batteryWh > 0 ? (solarState.batteryWh / 1000) : ''}" 
                   oninput="window.updateSolarInput('batteryWh', this.value)"
+                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                   class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">Wh</span>
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">kWh</span>
               </div>
               <p id="solar-out-usable-storage" class="text-[11px] text-stone-500 font-sans">Usable storage: ${(m.usableCapacityWh/1000).toFixed(1)} kWh (80% DoD)</p>
             </div>
@@ -6127,6 +6194,7 @@
                   step="1"
                   value="${Math.round(solarState.pmRatio * 100)}" 
                   oninput="window.updateSolarInput('pmRatio', this.value)"
+                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
                   class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">% PM</span>
