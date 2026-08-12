@@ -5275,7 +5275,12 @@
 
     window.toggleSolarAdvanced = function() {
       solarShowAdvanced = !solarShowAdvanced;
-      window.renderSolarCalculator();
+      window.renderSolarCalculator(true);
+    };
+
+    window.setSolarAdvancedMode = function(isAdvanced) {
+      solarShowAdvanced = !!isAdvanced;
+      window.renderSolarCalculator(true);
     };
 
     function getRecommendedPackage(monthlyKwh) {
@@ -5568,7 +5573,7 @@
       if (wattsInput && wattsInput.value !== "") {
         const w = parseFloat(wattsInput.value);
         if (!isNaN(w) && w >= 0) {
-          solarState.solarWatts = w * 1000;
+          solarState.solarWatts = solarShowAdvanced ? w : w * 1000;
           if (solarState.sysA) solarState.sysA.solarWatts = solarState.solarWatts;
         }
       } else if (solarState.monthlyKwh > 0) {
@@ -5631,7 +5636,7 @@
         }
       }
       else if (field === 'solarWatts') {
-        solarState.solarWatts = safeVal * 1000;
+        solarState.solarWatts = solarShowAdvanced ? safeVal : safeVal * 1000;
         if (solarState.sysA) solarState.sysA.solarWatts = solarState.solarWatts;
       }
       else if (field === 'batteryWh') {
@@ -5678,7 +5683,7 @@
         if (inputBill && document.activeElement !== inputBill) inputBill.value = solarState.billAmount || "";
 
         if (inputWatts && document.activeElement !== inputWatts) {
-          inputWatts.value = solarState.solarWatts > 0 ? (solarState.solarWatts / 1000) : "";
+          inputWatts.value = solarState.solarWatts > 0 ? (solarShowAdvanced ? solarState.solarWatts : (solarState.solarWatts / 1000)) : "";
         }
         if (inputBatt && document.activeElement !== inputBatt) {
           inputBatt.value = solarState.batteryWh > 0 ? (solarState.batteryWh / 1000) : "";
@@ -5718,7 +5723,7 @@
         if (outAvgDaily) outAvgDaily.textContent = `Avg daily load: ${(solarState.monthlyKwh/30).toFixed(1)} kWh/day`;
 
         const outSolarKw = document.getElementById("solar-out-solar-kw");
-        if (outSolarKw) outSolarKw.textContent = `${(solarState.solarWatts/1000).toFixed(1)} kW`;
+        if (outSolarKw) outSolarKw.textContent = solarShowAdvanced ? `${solarState.solarWatts.toLocaleString()} Watts` : `${(solarState.solarWatts/1000).toFixed(1)} kW`;
 
         const outSolarDaily = document.getElementById("solar-out-solar-daily");
         if (outSolarDaily) outSolarDaily.textContent = `Daily solar output: ~${m.dailyGenKwh.toFixed(1)} kWh/day`;
@@ -6121,7 +6126,25 @@
               <h3 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight">Active Hardware Configuration</h3>
               <p class="text-xs text-stone-500 mt-0.5">Custom adjustment for installed solar panels, battery capacity, and nighttime allocation percentage</p>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">
+              <!-- Mode Selector Switch: Standard vs Advanced Configurations -->
+              <div class="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
+                <button 
+                  type="button" 
+                  onclick="window.setSolarAdvancedMode(false)"
+                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${!solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                >
+                  Standard Configurations
+                </button>
+                <button 
+                  type="button" 
+                  onclick="window.setSolarAdvancedMode(true)"
+                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                >
+                  Advanced Configurations
+                </button>
+              </div>
+
               <button 
                 type="button" 
                 onclick="window.applyTariffAndUsageChanges()"
@@ -6140,22 +6163,48 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
               <div class="flex items-center justify-between">
-                <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Solar Panel Array</label>
-                <span id="solar-out-solar-kw" class="text-xs font-mono font-bold text-emerald-700">${(solarState.solarWatts/1000).toFixed(1)} kW</span>
+                <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Solar Packages</label>
+                <span id="solar-out-solar-kw" class="text-xs font-mono font-bold text-emerald-700">${solarShowAdvanced ? `${solarState.solarWatts.toLocaleString()} Watts` : `${(solarState.solarWatts/1000).toFixed(1)} kW`}</span>
               </div>
-              <div class="relative">
-                <input 
-                  id="solar-input-solarWatts"
-                  type="number" 
-                  min="0"
-                  step="any"
-                  value="${solarState.solarWatts > 0 ? (solarState.solarWatts / 1000) : ''}" 
-                  oninput="window.updateSolarInput('solarWatts', this.value)"
-                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
-                  class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">kW</span>
-              </div>
+              ${!solarShowAdvanced ? `
+                <div class="relative">
+                  <select 
+                    id="solar-input-solarWatts"
+                    onchange="window.updateSolarInput('solarWatts', this.value)"
+                    class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    ${(() => {
+                      const pkgOpts = [5, 6, 8, 10, 12, 16];
+                      const currentKw = solarState.solarWatts > 0 ? (solarState.solarWatts / 1000) : 8;
+                      const hasMatch = pkgOpts.some(opt => Math.abs(opt - currentKw) < 0.01);
+                      let html = '';
+                      if (!hasMatch && currentKw > 0) {
+                        html += `<option value="${currentKw}" selected>${currentKw % 1 === 0 ? currentKw : currentKw.toFixed(1)} kW (Custom)</option>`;
+                      }
+                      pkgOpts.forEach(opt => {
+                        const isSelected = hasMatch && Math.abs(opt - currentKw) < 0.01;
+                        html += `<option value="${opt}" ${isSelected ? 'selected' : ''}>${opt} kW Package</option>`;
+                      });
+                      return html;
+                    })()}
+                  </select>
+                </div>
+              ` : `
+                <div class="relative">
+                  <input 
+                    id="solar-input-solarWatts"
+                    type="number" 
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 8000"
+                    value="${solarState.solarWatts > 0 ? solarState.solarWatts : ''}" 
+                    oninput="window.updateSolarInput('solarWatts', this.value)"
+                    onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
+                    class="w-full bg-white border border-stone-300 rounded-lg pl-3.5 pr-16 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">Watts</span>
+                </div>
+              `}
               <p id="solar-out-solar-daily" class="text-[11px] text-stone-500 font-sans">Daily solar output: ~${m.dailyGenKwh.toFixed(1)} kWh/day</p>
             </div>
 
@@ -6399,7 +6448,9 @@
         drawLogoFallbackBadge(doc, 12, 6);
       }
 
-      const clientNameStr = solarState.clientName ? solarState.clientName.trim() : "";
+      const rawClientName = solarState.clientName || (document.getElementById("solar-input-clientName") ? document.getElementById("solar-input-clientName").value : "");
+      const clientNameStr = rawClientName ? rawClientName.trim() : "";
+      const displayClient = clientNameStr ? clientNameStr.toUpperCase() : "NON-APPLICABLE";
       const currentDateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
       // Watermark/Metadata (Right Aligned Header Banner)
@@ -6407,12 +6458,9 @@
       doc.setFontSize(8);
       doc.setFont("Helvetica", "normal");
       doc.text(`DATE: ${currentDateStr}`, 195, 16, { align: "right" });
-      doc.text("VERSION: 2.4", 195, 22, { align: "right" });
-      if (clientNameStr) {
-        doc.setFont("Helvetica", "bold");
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.text(`CLIENT: ${clientNameStr.toUpperCase()}`, 195, 28, { align: "right" });
-      }
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text(`CLIENT: ${displayClient}`, 195, 23, { align: "right" });
 
       let y = 46;
 
@@ -6485,11 +6533,11 @@
       doc.line(15, y, 195, y);
 
       const sec2Data = [
-        ["Installed Solar PV Capacity", `${m.solarWatts.toLocaleString()} Watts (${(m.solarWatts/1000).toFixed(2)} kWp)`],
-        ["Thermal & Wiring Loss Factor", `-${Math.round(m.efficiencyLossWatts).toLocaleString()} Watts (${(solarState.efficiencyLossRatio*100).toFixed(0)}% loss)`],
-        ["Net Peak Generation Output", `${Math.round(m.netPeakWatts).toLocaleString()} Watts`],
+        ["Installed Solar PV Capacity", `${(m.solarWatts/1000).toFixed(2)} kWp`],
+        ["Thermal & Wiring Loss Factor", `-${(m.efficiencyLossWatts/1000).toFixed(2)} kW (${(solarState.efficiencyLossRatio*100).toFixed(0)}% loss)`],
+        ["Net Peak Generation Output", `${(m.netPeakWatts/1000).toFixed(2)} kW`],
         ["Daytime (AM) Load Allocation", `${m.amRequirementKwh.toFixed(2)} kWh / day (${(solarState.amRatio*100).toFixed(0)}% daytime load)`],
-        ["Est. Daily Solar Generation", `${m.dailyGenKwh.toFixed(2)} kWh / day (${Math.round(m.dailyGenWh).toLocaleString()} Wh)`]
+        ["Est. Daily Solar Generation", `${m.dailyGenKwh.toFixed(2)} kWh / day`]
       ];
 
       sec2Data.forEach((row) => {
@@ -6520,10 +6568,10 @@
       doc.line(15, y, 195, y);
 
       const sec3Data = [
-        ["Installed Battery Storage Capacity", `${m.totalBatteryWh.toLocaleString()} Wh (${(m.totalBatteryWh/1000).toFixed(1)} kWh)`],
-        ["Usable Battery Capacity (80% DoD)", `${Math.round(m.usableCapacityWh).toLocaleString()} Wh (${(m.usableCapacityWh/1000).toFixed(2)} kWh)`],
-        ["Nighttime (PM) Load Allocation", `${m.pmRequirementKwh.toFixed(2)} kWh / day (${Math.round(m.pmRequirementWh).toLocaleString()} Wh)`],
-        ["Emergency Reserve Buffer (20%)", `${Math.round(m.reserveCapacityWh).toLocaleString()} Wh (${(m.reserveCapacityWh/1000).toFixed(2)} kWh)`],
+        ["Installed Battery Storage Capacity", `${(m.totalBatteryWh/1000).toFixed(1)} kWh`],
+        ["Usable Battery Capacity (80% DoD)", `${(m.usableCapacityWh/1000).toFixed(2)} kWh`],
+        ["Nighttime (PM) Load Allocation", `${m.pmRequirementKwh.toFixed(2)} kWh / day`],
+        ["Emergency Reserve Buffer (20%)", `${(m.reserveCapacityWh/1000).toFixed(2)} kWh`],
         ["Estimated Nighttime Grid Import Needed", m.remainingGridDependencyKwh > 0 ? `${m.remainingGridDependencyKwh.toFixed(2)} kWh / day` : "0 kWh / day (100% Off-Grid Ready)"]
       ];
 
