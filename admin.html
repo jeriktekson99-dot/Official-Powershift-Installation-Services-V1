@@ -5977,11 +5977,11 @@
         </div>
 
         <!-- 1. Electricity Tariff & Usage Mode Configuration Card -->
-        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-5">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-xs space-y-5">
           <div class="pb-3 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight flex items-center gap-2">
-                <svg class="w-4 h-4 text-[#05300a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <svg class="w-4 h-4 text-[#05300a] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Electricity Tariff & Usage Configuration
@@ -5996,14 +5996,14 @@
                 <button 
                   type="button" 
                   onclick="window.setSolarInputMode('kwh')"
-                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'kwh' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                  class="px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'kwh' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
                 >
                   ⚡ kWh Usage Mode
                 </button>
                 <button 
                   type="button" 
                   onclick="window.setSolarInputMode('bill')"
-                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'bill' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                  class="px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarState.inputMode === 'bill' ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
                 >
                   ₱ Bill Amount Mode
                 </button>
@@ -6029,9 +6029,9 @@
             
             <!-- Electricity Rate Field -->
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Electricity Rate (₱/kWh)</label>
-                <span class="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Tariff</span>
+                <span class="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">Tariff</span>
               </div>
               <div class="relative">
                 <span class="absolute left-3.5 top-2.5 text-base font-mono font-bold text-stone-500">₱</span>
@@ -6053,9 +6053,9 @@
             <!-- Conditional Usage / Bill Amount Field -->
             ${solarState.inputMode === 'kwh' ? `
               <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
                   <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Monthly Electric Usage</label>
-                  <span id="solar-out-daily-kwh-head" class="text-xs font-mono font-bold text-[#05300a]">${m.dailyKwh.toFixed(1)} kWh/day</span>
+                  <span id="solar-out-daily-kwh-head" class="text-xs font-mono font-bold text-[#05300a] shrink-0">${m.dailyKwh.toFixed(1)} kWh/day</span>
                 </div>
                 <div class="relative">
                   <input 
@@ -6083,9 +6083,9 @@
               </div>
             ` : `
               <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-1.5 flex-wrap">
                   <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Total Monthly Bill Amount</label>
-                  <span class="text-xs font-mono font-bold text-emerald-700">Monetary Input</span>
+                  <span class="text-xs font-mono font-bold text-emerald-700 shrink-0">Monetary Input</span>
                 </div>
                 <div class="relative">
                   <span class="absolute left-3.5 top-2.5 text-base font-mono font-bold text-stone-500">₱</span>
@@ -6120,8 +6120,8 @@
         </div>
 
         <!-- 3. System Hardware Parameters (Adjustable Array & Battery Inputs) -->
-        <div class="bg-white p-6 rounded-2xl border border-stone-200 shadow-xs space-y-5">
-          <div class="pb-3 border-b border-stone-100 flex items-center justify-between">
+        <div class="bg-white p-4 sm:p-6 rounded-2xl border border-stone-200 shadow-xs space-y-5">
+          <div class="pb-3 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight">Active Hardware Configuration</h3>
               <p class="text-xs text-stone-500 mt-0.5">Custom adjustment for installed solar panels, battery capacity, and nighttime allocation percentage</p>
@@ -6132,16 +6132,16 @@
                 <button 
                   type="button" 
                   onclick="window.setSolarAdvancedMode(false)"
-                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${!solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                  class="px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${!solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
                 >
-                  Standard Configurations
+                  Standard<span class="hidden sm:inline"> Configurations</span>
                 </button>
                 <button 
                   type="button" 
                   onclick="window.setSolarAdvancedMode(true)"
-                  class="px-3 py-1.5 rounded-lg text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
+                  class="px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${solarShowAdvanced ? 'bg-[#05300a] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'}"
                 >
-                  Advanced Configurations
+                  Advanced<span class="hidden sm:inline"> Configurations</span>
                 </button>
               </div>
 
@@ -6162,9 +6162,9 @@
           <!-- 3 Hardware Inputs -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Solar Packages</label>
-                <span id="solar-out-solar-kw" class="text-xs font-mono font-bold text-emerald-700">${solarShowAdvanced ? `${solarState.solarWatts.toLocaleString()} Watts` : `${(solarState.solarWatts/1000).toFixed(1)} kW`}</span>
+                <span id="solar-out-solar-kw" class="text-xs font-mono font-bold text-emerald-700 shrink-0">${solarShowAdvanced ? `${solarState.solarWatts.toLocaleString()} Watts` : `${(solarState.solarWatts/1000).toFixed(1)} kW`}</span>
               </div>
               ${!solarShowAdvanced ? `
                 <div class="relative">
@@ -6209,9 +6209,9 @@
             </div>
 
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Battery Capacity</label>
-                <span id="solar-out-batt-kwh" class="text-xs font-mono font-bold text-emerald-700">${(solarState.batteryWh/1000).toFixed(1)} kWh</span>
+                <span id="solar-out-batt-kwh" class="text-xs font-mono font-bold text-emerald-700 shrink-0">${(solarState.batteryWh/1000).toFixed(1)} kWh</span>
               </div>
               <div class="relative">
                 <input 
@@ -6230,9 +6230,9 @@
             </div>
 
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Nighttime Load % (PM)</label>
-                <span id="solar-out-load-ratio-badge" class="text-xs font-mono font-bold text-indigo-700">${Math.round(solarState.pmRatio * 100)}% PM / ${Math.round(solarState.amRatio * 100)}% AM</span>
+                <span id="solar-out-load-ratio-badge" class="text-xs font-mono font-bold text-indigo-700 shrink-0">${Math.round(solarState.pmRatio * 100)}% PM / ${Math.round(solarState.amRatio * 100)}% AM</span>
               </div>
               <div class="relative">
                 <input 
