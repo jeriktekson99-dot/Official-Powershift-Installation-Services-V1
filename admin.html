@@ -5549,6 +5549,7 @@
       const billInput = document.getElementById("solar-input-billAmount");
       const wattsInput = document.getElementById("solar-input-solarWatts");
       const battInput = document.getElementById("solar-input-batteryWh");
+      const amInput = document.getElementById("solar-input-amRatio");
       const pmInput = document.getElementById("solar-input-pmRatio");
 
       if (rateInput && rateInput.value !== "") {
@@ -5598,12 +5599,26 @@
         }
       }
 
-      if (pmInput && pmInput.value !== "") {
+      if (document.activeElement === amInput && amInput && amInput.value !== "") {
+        const am = parseFloat(amInput.value);
+        if (!isNaN(am)) {
+          const safeAm = Math.min(100, Math.max(0, am));
+          solarState.amRatio = safeAm / 100;
+          solarState.pmRatio = (100 - safeAm) / 100;
+        }
+      } else if (pmInput && pmInput.value !== "") {
         const pm = parseFloat(pmInput.value);
         if (!isNaN(pm)) {
           const safePm = Math.min(100, Math.max(0, pm));
           solarState.pmRatio = safePm / 100;
           solarState.amRatio = (100 - safePm) / 100;
+        }
+      } else if (amInput && amInput.value !== "") {
+        const am = parseFloat(amInput.value);
+        if (!isNaN(am)) {
+          const safeAm = Math.min(100, Math.max(0, am));
+          solarState.amRatio = safeAm / 100;
+          solarState.pmRatio = (100 - safeAm) / 100;
         }
       }
 
@@ -5689,6 +5704,9 @@
           inputBatt.value = solarState.batteryWh > 0 ? (solarState.batteryWh / 1000) : "";
         }
 
+        const inputAmMain = document.getElementById("solar-input-amRatio");
+        if (inputAmMain && document.activeElement !== inputAmMain) inputAmMain.value = Math.round(solarState.amRatio * 100);
+
         const inputPmMain = document.getElementById("solar-input-pmRatio");
         if (inputPmMain && document.activeElement !== inputPmMain) inputPmMain.value = Math.round(solarState.pmRatio * 100);
 
@@ -5734,8 +5752,14 @@
         const outUsableStorage = document.getElementById("solar-out-usable-storage");
         if (outUsableStorage) outUsableStorage.textContent = `Usable storage: ${(m.usableCapacityWh/1000).toFixed(1)} kWh (80% DoD)`;
 
-        const outLoadBadge = document.getElementById("solar-out-load-ratio-badge");
-        if (outLoadBadge) outLoadBadge.textContent = `${Math.round(solarState.pmRatio * 100)}% PM / ${Math.round(solarState.amRatio * 100)}% AM`;
+        const outAmLoadBadge = document.getElementById("solar-out-am-load-badge");
+        if (outAmLoadBadge) outAmLoadBadge.textContent = `${Math.round(solarState.amRatio * 100)}% AM (${m.amRequirementKwh.toFixed(1)} kWh)`;
+
+        const outPmLoadBadge = document.getElementById("solar-out-pm-load-badge");
+        if (outPmLoadBadge) outPmLoadBadge.textContent = `${Math.round(solarState.pmRatio * 100)}% PM (${m.pmRequirementKwh.toFixed(1)} kWh)`;
+
+        const outDayReqSub = document.getElementById("solar-out-day-req-sub");
+        if (outDayReqSub) outDayReqSub.textContent = `Daytime load: ~${m.amRequirementKwh.toFixed(1)} kWh/day`;
 
         const outNightReqSub = document.getElementById("solar-out-night-req-sub");
         if (outNightReqSub) outNightReqSub.textContent = `Night load requirement: ~${m.pmRequirementKwh.toFixed(1)} kWh/day`;
@@ -5836,9 +5860,9 @@
                     <span id="solar-out-pm-kwh" class="font-mono font-bold text-indigo-700 min-w-[70px] text-right">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
                   </div>
                 </div>
-                <div class="flex justify-between py-1 items-center">
-                  <span class="text-stone-500">Est. Daily Solar Generation:</span>
-                  <span id="solar-out-daily-gen" class="font-mono font-bold text-emerald-800">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
+                <div class="flex justify-between py-1.5 px-2 bg-emerald-50/90 rounded-lg border border-emerald-200/80 items-center">
+                  <span class="text-stone-800 font-bold text-xs">Est. Daily Solar Generation:</span>
+                  <span id="solar-out-daily-gen" class="font-mono font-black text-sm text-[#05300a]">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
                 </div>
               </div>
             `;
@@ -6159,8 +6183,8 @@
             </div>
           </div>
 
-          <!-- 3 Hardware Inputs -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- 4 Hardware Inputs -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
               <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Solar Packages</label>
@@ -6231,8 +6255,30 @@
 
             <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
               <div class="flex items-center justify-between gap-1.5 flex-wrap">
+                <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Daytime Load % (AM)</label>
+                <span id="solar-out-am-load-badge" class="text-xs font-mono font-bold text-amber-700 shrink-0">${Math.round(solarState.amRatio * 100)}% AM (${m.amRequirementKwh.toFixed(1)} kWh)</span>
+              </div>
+              <div class="relative">
+                <input 
+                  id="solar-input-amRatio"
+                  type="number" 
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="${Math.round(solarState.amRatio * 100)}" 
+                  oninput="window.updateSolarInput('amRatio', this.value)"
+                  onkeydown="if(event.key==='Enter') window.applyTariffAndUsageChanges()"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3.5 py-2 text-lg font-mono font-bold text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <span class="absolute right-3 top-2.5 text-xs font-mono text-stone-400 font-bold">% AM</span>
+              </div>
+              <p id="solar-out-day-req-sub" class="text-[11px] text-stone-500 font-sans">Daytime load: ~${m.amRequirementKwh.toFixed(1)} kWh/day</p>
+            </div>
+
+            <div class="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-2">
+              <div class="flex items-center justify-between gap-1.5 flex-wrap">
                 <label class="text-xs font-mono font-bold text-stone-700 uppercase tracking-wider block">Nighttime Load % (PM)</label>
-                <span id="solar-out-load-ratio-badge" class="text-xs font-mono font-bold text-indigo-700 shrink-0">${Math.round(solarState.pmRatio * 100)}% PM / ${Math.round(solarState.amRatio * 100)}% AM</span>
+                <span id="solar-out-pm-load-badge" class="text-xs font-mono font-bold text-indigo-700 shrink-0">${Math.round(solarState.pmRatio * 100)}% PM (${m.pmRequirementKwh.toFixed(1)} kWh)</span>
               </div>
               <div class="relative">
                 <input 
@@ -6332,9 +6378,9 @@
                   <span id="solar-out-pm-kwh" class="font-mono font-bold text-indigo-700 min-w-[70px] text-right">${m.pmRequirementKwh.toFixed(2)} kWh/day</span>
                 </div>
               </div>
-              <div class="flex justify-between py-1 items-center">
-                <span class="text-stone-500">Est. Daily Solar Generation:</span>
-                <span id="solar-out-daily-gen" class="font-mono font-bold text-emerald-800">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
+              <div class="flex justify-between py-1.5 px-2 bg-emerald-50/90 rounded-lg border border-emerald-200/80 items-center">
+                <span class="text-stone-800 font-bold text-xs">Est. Daily Solar Generation:</span>
+                <span id="solar-out-daily-gen" class="font-mono font-black text-sm text-[#05300a]">${m.dailyGenKwh.toFixed(2)} kWh/day</span>
               </div>
             </div>
           </div>
@@ -6473,36 +6519,49 @@
 
       // SECTION 1: CUSTOMER CONSUMPTION PROFILE & TARIFF
       doc.setFillColor(lightGrey[0], lightGrey[1], lightGrey[2]);
-      doc.rect(15, y, 180, 26, 'F');
+      doc.roundedRect(15, y, 180, 27, 2, 2, 'F');
 
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont("Helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("1. CUSTOMER CONSUMPTION PROFILE & TARIFF", 20, y + 7);
+      doc.setFontSize(10.5);
+      doc.text("1. CUSTOMER CONSUMPTION PROFILE & TARIFF", 20, y + 6.5);
 
+      // Column 1: Monthly Consumption & Avg Daily Usage
+      doc.setFontSize(8.5);
       doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
       doc.setFont("Helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text("Monthly Consumption:", 20, y + 15);
+      doc.text("Monthly Consumption:", 20, y + 14);
       doc.setFont("Helvetica", "bold");
-      doc.text(`${m.monthlyKwh.toLocaleString()} kWh / month`, 60, y + 15);
+      doc.text(`${m.monthlyKwh.toLocaleString()} kWh / mo`, 54, y + 14);
 
       doc.setFont("Helvetica", "normal");
-      doc.text("Electricity Rate:", 115, y + 15);
+      doc.text("Avg Daily Usage:", 20, y + 21);
       doc.setFont("Helvetica", "bold");
-      doc.text(`PHP ${(solarState.elecRate || 12).toFixed(2)} / kWh`, 155, y + 15);
+      doc.text(`${m.dailyKwh.toFixed(2)} kWh / day`, 54, y + 21);
+
+      // Column 2 (NEW COLUMN): Daytime (AM) & Nighttime (PM) Load Allocation
+      doc.setFont("Helvetica", "normal");
+      doc.text("Daytime Load (AM):", 80, y + 14);
+      doc.setFont("Helvetica", "bold");
+      doc.text(`${m.amRequirementKwh.toFixed(2)} kWh (${Math.round(solarState.amRatio * 100)}%)`, 110, y + 14);
 
       doc.setFont("Helvetica", "normal");
-      doc.text("Average Daily Usage:", 20, y + 21);
+      doc.text("Nighttime Load (PM):", 80, y + 21);
       doc.setFont("Helvetica", "bold");
-      doc.text(`${m.dailyKwh.toFixed(2)} kWh / day`, 60, y + 21);
+      doc.text(`${m.pmRequirementKwh.toFixed(2)} kWh (${Math.round(solarState.pmRatio * 100)}%)`, 110, y + 21);
+
+      // Column 3: Electricity Tariff & Est. Monthly Bill
+      doc.setFont("Helvetica", "normal");
+      doc.text("Electricity Rate:", 142, y + 14);
+      doc.setFont("Helvetica", "bold");
+      doc.text(`PHP ${(solarState.elecRate || 12).toFixed(2)} / kWh`, 166, y + 14);
 
       doc.setFont("Helvetica", "normal");
-      doc.text("Est. Monthly Bill:", 115, y + 21);
+      doc.text("Est. Monthly Bill:", 142, y + 21);
       doc.setFont("Helvetica", "bold");
-      doc.text(`PHP ${m.monthlyBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo`, 155, y + 21);
+      doc.text(`PHP ${m.monthlyBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / mo`, 166, y + 21);
 
-      y += 32;
+      y += 33;
 
       // RECOMMENDED SYSTEM PACKAGE SUMMARY BOX
       doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -6541,18 +6600,39 @@
       ];
 
       sec2Data.forEach((row) => {
-        y += 8;
-        doc.setFont("Helvetica", "normal");
-        doc.setFontSize(9.5);
-        doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
-        doc.text(row[0], 20, y - 2.5);
+        const isDailyGen = row[0] === "Est. Daily Solar Generation";
 
-        doc.setFont("Helvetica", "bold");
-        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.text(row[1], 195, y - 2.5, { align: "right" });
+        if (isDailyGen) {
+          y += 10;
+          // Prominently highlight and bold the Daily Solar Generation Output row without any colliding lines
+          doc.setFillColor(236, 248, 239);
+          doc.roundedRect(15, y - 6.5, 180, 9.5, 1.5, 1.5, 'F');
+          doc.setDrawColor(160, 215, 180);
+          doc.roundedRect(15, y - 6.5, 180, 9.5, 1.5, 1.5, 'S');
 
-        doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-        doc.line(15, y, 195, y);
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(9.5);
+          doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.text(row[0], 20, y - 0.8);
+
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(10.5);
+          doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.text(row[1], 195, y - 0.8, { align: "right" });
+        } else {
+          y += 8;
+          doc.setFont("Helvetica", "normal");
+          doc.setFontSize(9.5);
+          doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+          doc.text(row[0], 20, y - 2.5);
+
+          doc.setFont("Helvetica", "bold");
+          doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.text(row[1], 195, y - 2.5, { align: "right" });
+
+          doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+          doc.line(15, y, 195, y);
+        }
       });
 
       y += 12;
