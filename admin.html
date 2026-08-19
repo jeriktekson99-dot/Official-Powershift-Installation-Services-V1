@@ -5283,7 +5283,7 @@
       window.renderSolarCalculator(true);
     };
 
-    function getRecommendedPackage(monthlyKwh) {
+    function getRecommendedPackage(monthlyKwh, explicitSolarWatts, explicitBatteryWh) {
       const days = solarState.daysInMonth || 30;
       const dailyKwh = monthlyKwh / days;
       const dailyWh = dailyKwh * 1000;
@@ -5305,28 +5305,44 @@
       // Ensure minimum system package size floor is 5 kW
       if (recKw < 5) recKw = 5;
 
+      // Target capacity in kW based on active/customized solarWatts if provided, or theoretical recKw
+      const hasExplicitWatts = typeof explicitSolarWatts === "number" && explicitSolarWatts > 0;
+      const targetKw = hasExplicitWatts ? (explicitSolarWatts / 1000) : recKw;
+
       // Nighttime battery storage needed in kWh with 15% efficiency loss buffer
       const nightKwh = (dailyKwh * (solarState.pmRatio || 0.60)) * (1 + effLoss);
-      const recBattKwh = Math.round((nightKwh / (solarState.dodUsableRatio || 0.80)) * 10) / 10;
+      const hasExplicitBatt = typeof explicitBatteryWh === "number" && explicitBatteryWh > 0;
+      const recBattKwh = hasExplicitBatt 
+        ? (explicitBatteryWh / 1000) 
+        : (Math.round((nightKwh / (solarState.dodUsableRatio || 0.80)) * 10) / 10);
 
       // Match against db.packages if present
       let matchedDbPkg = null;
       if (window.db && window.db.packages && window.db.packages.length > 0) {
-        let minDiff = Infinity;
-        window.db.packages.forEach(pkg => {
+        // Look for exact match by capacity kW
+        matchedDbPkg = window.db.packages.find(pkg => {
           const pkgCap = parseFloat((pkg.capacity || pkg.tier || '0').replace(/[^0-9.]/g, ''));
-          if (!isNaN(pkgCap) && pkgCap > 0) {
-            if (pkgCap >= recKw) {
-              const diff = pkgCap - recKw;
-              if (diff < minDiff) {
-                minDiff = diff;
-                matchedDbPkg = pkg;
-              }
-            }
-          }
+          return !isNaN(pkgCap) && Math.abs(pkgCap - targetKw) < 0.05;
         });
 
-        // Fallback if all packages are smaller than recKw
+        // If no exact match and not explicit watts, find closest >= targetKw
+        if (!matchedDbPkg && !hasExplicitWatts) {
+          let minDiff = Infinity;
+          window.db.packages.forEach(pkg => {
+            const pkgCap = parseFloat((pkg.capacity || pkg.tier || '0').replace(/[^0-9.]/g, ''));
+            if (!isNaN(pkgCap) && pkgCap > 0) {
+              if (pkgCap >= targetKw) {
+                const diff = pkgCap - targetKw;
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  matchedDbPkg = pkg;
+                }
+              }
+            }
+          });
+        }
+
+        // Fallback if target exceeds all packages
         if (!matchedDbPkg) {
           let maxCap = -1;
           window.db.packages.forEach(pkg => {
@@ -5339,10 +5355,11 @@
         }
       }
 
-      let pkgName = matchedDbPkg ? matchedDbPkg.name : `${recKw}KW HYBRID PACKAGE`;
-      let pkgCapacityKw = matchedDbPkg ? (parseFloat((matchedDbPkg.capacity || matchedDbPkg.tier || '0').replace(/[^0-9.]/g, '')) || recKw) : recKw;
-      let onGridPriceStr = matchedDbPkg ? (matchedDbPkg.onGridPrice || '0') : (recKw * 25000).toLocaleString();
-      let hybridPriceStr = matchedDbPkg ? (matchedDbPkg.hybridPrice || '0') : (recKw * 35000).toLocaleString();
+      const formattedKwStr = targetKw % 1 === 0 ? targetKw : targetKw.toFixed(1);
+      let pkgName = matchedDbPkg ? matchedDbPkg.name : `${formattedKwStr}KW HYBRID PACKAGE`;
+      let pkgCapacityKw = matchedDbPkg ? (parseFloat((matchedDbPkg.capacity || matchedDbPkg.tier || '0').replace(/[^0-9.]/g, '')) || targetKw) : targetKw;
+      let onGridPriceStr = matchedDbPkg ? (matchedDbPkg.onGridPrice || '0') : (targetKw * 25000).toLocaleString();
+      let hybridPriceStr = matchedDbPkg ? (matchedDbPkg.hybridPrice || '0') : (targetKw * 35000).toLocaleString();
 
       const rate = solarState.elecRate || 12.00;
       const monthlyBill = monthlyKwh * rate;
@@ -5399,7 +5416,7 @@
       const elecRate = solarState.elecRate || 12.00;
       const monthlyBill = monthlyKwh * elecRate;
       const dailyBill = monthlyBill / days;
-      const recommendedPkg = getRecommendedPackage(monthlyKwh);
+      const recommendedPkg = getRecommendedPackage(monthlyKwh, solarWatts, batteryWh);
 
       return {
         monthlyKwh,
@@ -6596,11 +6613,13 @@
         ["Thermal & Wiring Loss Factor", `-${(m.efficiencyLossWatts/1000).toFixed(2)} kW (${(solarState.efficiencyLossRatio*100).toFixed(0)}% loss)`],
         ["Net Peak Generation Output", `${(m.netPeakWatts/1000).toFixed(2)} kW`],
         ["Daytime (AM) Load Allocation", `${m.amRequirementKwh.toFixed(2)} kWh / day (${(solarState.amRatio*100).toFixed(0)}% daytime load)`],
-        ["Est. Daily Solar Generation", `${m.dailyGenKwh.toFixed(2)} kWh / day`]
+        ["Est. Daily Solar Generation", `${m.dailyGenKwh.toFixed(2)} kWh / day`],
+        ["Avg Daily Usage", `${m.dailyKwh.toFixed(2)} kWh / day`]
       ];
 
       sec2Data.forEach((row) => {
         const isDailyGen = row[0] === "Est. Daily Solar Generation";
+        const isDailyUsage = row[0] === "Avg Daily Usage";
 
         if (isDailyGen) {
           y += 10;
@@ -6618,6 +6637,23 @@
           doc.setFont("Helvetica", "bold");
           doc.setFontSize(10.5);
           doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+          doc.text(row[1], 195, y - 0.8, { align: "right" });
+        } else if (isDailyUsage) {
+          y += 10.5;
+          // Prominently highlight and bold the Avg Daily Usage row
+          doc.setFillColor(242, 246, 252);
+          doc.roundedRect(15, y - 6.5, 180, 9.5, 1.5, 1.5, 'F');
+          doc.setDrawColor(190, 210, 235);
+          doc.roundedRect(15, y - 6.5, 180, 9.5, 1.5, 1.5, 'S');
+
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(9.5);
+          doc.setTextColor(30, 60, 110);
+          doc.text(row[0], 20, y - 0.8);
+
+          doc.setFont("Helvetica", "bold");
+          doc.setFontSize(10.5);
+          doc.setTextColor(20, 50, 95);
           doc.text(row[1], 195, y - 0.8, { align: "right" });
         } else {
           y += 8;
@@ -6637,11 +6673,11 @@
 
       y += 12;
 
-      // SECTION 3: BATTERY STORAGE & GRID DEPENDENCY
+      // SECTION 3: BATTERY SOLAR STORAGE & GRID DEPENDENCY
       doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(12);
-      doc.text("3. BATTERY STORAGE & GRID DEPENDENCY", 15, y);
+      doc.text("3. BATTERY SOLAR STORAGE & GRID DEPENDENCY", 15, y);
       y += 6;
 
       doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
