@@ -5018,6 +5018,10 @@
       solarWatts: 8000,
       batteryWh: 16000,
 
+      panelWattage: 550, // Standard Tier-1 Monocrystalline Panel (Watts)
+      pvPanelsCount: null, // Custom or auto panel count (under 20% capacity threshold)
+      pvStringsCount: null, // String configuration count
+
       sysA: { solarWatts: 8000, batteryWh: 16000 },
       sysB: { solarWatts: 6200, batteryWh: 10000 },
 
@@ -5079,6 +5083,9 @@
         billAmount: solarState.billAmount || (solarState.monthlyKwh * (solarState.elecRate || 12.00)),
         solarWatts: solarState.solarWatts,
         batteryWh: solarState.batteryWh,
+        panelWattage: solarState.panelWattage || 550,
+        pvPanelsCount: solarState.pvPanelsCount || null,
+        pvStringsCount: solarState.pvStringsCount || null,
         amRatio: solarState.amRatio,
         pmRatio: solarState.pmRatio,
         sysA: { ...solarState.sysA },
@@ -5117,6 +5124,9 @@
       solarState.billAmount = found.billAmount !== undefined ? found.billAmount : (solarState.monthlyKwh * solarState.elecRate);
       solarState.solarWatts = found.solarWatts || 8000;
       solarState.batteryWh = found.batteryWh || 16000;
+      solarState.panelWattage = found.panelWattage || 550;
+      solarState.pvPanelsCount = found.pvPanelsCount || null;
+      solarState.pvStringsCount = found.pvStringsCount || null;
       solarState.activeClientId = found.id;
       if (found.amRatio !== undefined) solarState.amRatio = found.amRatio;
       if (found.pmRatio !== undefined) solarState.pmRatio = found.pmRatio;
@@ -5140,6 +5150,9 @@
       solarState.billAmount = 11280;
       solarState.solarWatts = 8000;
       solarState.batteryWh = 16000;
+      solarState.panelWattage = 550;
+      solarState.pvPanelsCount = null;
+      solarState.pvStringsCount = null;
       solarState.amRatio = 0.40;
       solarState.pmRatio = 0.60;
       solarState.sysA = { solarWatts: 8000, batteryWh: 16000 };
@@ -5351,6 +5364,180 @@
       };
     }
 
+    function computePvArraySpecs(solarWatts, panelWatts, panelsCount, stringsCount) {
+      const pSysKw = (solarWatts > 0 ? solarWatts : 8000) / 1000;
+      const pModWatts = (typeof panelWatts === 'number' && panelWatts > 0) ? panelWatts : (solarState.panelWattage || 550);
+      
+      // 20% oversizing threshold relative to total system capacity
+      const maxThresholdRatio = 1.20;
+      const maxAllowedArrayKw = pSysKw * maxThresholdRatio;
+      const maxAllowedArrayWatts = pSysKw * 1000 * maxThresholdRatio;
+
+      // Auto-calculated optimal panels count (stays under 20% oversizing threshold)
+      let autoCount = Math.round((pSysKw * 1000) / pModWatts);
+      if (autoCount * pModWatts > maxAllowedArrayWatts) {
+        autoCount = Math.floor(maxAllowedArrayWatts / pModWatts);
+      }
+      if (autoCount < 1) autoCount = 1;
+
+      // Actual panels count in use
+      const actualCount = (typeof panelsCount === 'number' && panelsCount > 0) ? panelsCount : autoCount;
+      const totalArrayWatts = actualCount * pModWatts;
+      const totalArrayKw = totalArrayWatts / 1000;
+
+      // Threshold evaluation: oversizing percentage relative to total system capacity
+      const deltaPercent = pSysKw > 0 ? (((totalArrayKw - pSysKw) / pSysKw) * 100) : 0;
+      const dcAcRatio = pSysKw > 0 ? (totalArrayKw / pSysKw) : 1.0;
+      const isUnderThreshold = deltaPercent <= 20.001; // Sizing incorporates threshold of under 20% relative to total system capacity
+      const thresholdMarginPercent = 20.0 - deltaPercent;
+
+      // String layout calculations
+      const numStrings = (typeof stringsCount === 'number' && stringsCount > 0) 
+        ? stringsCount 
+        : (solarState.pvStringsCount || (actualCount > 14 ? 2 : 1));
+      const panelsPerString = Math.ceil(actualCount / numStrings);
+
+      // Electrical specs based on Tier-1 Monocrystalline standard @ STC
+      const vmpMod = 42.0 * (pModWatts / 550);
+      const vocMod = 49.8 * (pModWatts / 550);
+      const impMod = pModWatts / vmpMod;
+      const iscMod = impMod * 1.065;
+
+      const stringVmp = panelsPerString * vmpMod;
+      const stringVocMax = panelsPerString * vocMod * 1.12; // 1.12 cold temperature coefficient (PEC / NEC 690.7)
+      const arrayImp = impMod * numStrings;
+      const arrayIsc = iscMod * numStrings;
+      
+      // Continuous DC current requirement (1.25 continuous factor per PEC / NEC)
+      const reqDcCurrent = arrayIsc * 1.25;
+
+      // Required THHN Copper Wire for PV DC Strings (90°C Dry/Wet THHN/THWN-2):
+      let dcWireGauge = "#10 AWG (5.5 mm²)";
+      let dcWireAmpacity = 30; // continuous
+      let dcConduit = "20 mm (3/4\") EMT or Rigid PVC";
+      let dcVoltDrop = "1.2%";
+
+      if (reqDcCurrent <= 24) {
+        dcWireGauge = "#10 AWG (5.5 mm²)";
+        dcWireAmpacity = 30;
+        dcConduit = "20 mm (3/4\") EMT or Rigid PVC";
+        dcVoltDrop = "1.2%";
+      } else if (reqDcCurrent <= 36) {
+        dcWireGauge = "#8 AWG (8.0 mm²)";
+        dcWireAmpacity = 50;
+        dcConduit = "25 mm (1\") EMT Conduit";
+        dcVoltDrop = "1.0%";
+      } else if (reqDcCurrent <= 52) {
+        dcWireGauge = "#6 AWG (14.0 mm²)";
+        dcWireAmpacity = 65;
+        dcConduit = "32 mm (1-1/4\") EMT Conduit";
+        dcVoltDrop = "0.8%";
+      } else {
+        dcWireGauge = "#4 AWG (22.0 mm²)";
+        dcWireAmpacity = 85;
+        dcConduit = "40 mm (1-1/2\") EMT Conduit";
+        dcVoltDrop = "0.7%";
+      }
+
+      // Required Inverter AC Output Continuous Current & THHN Wire Sizing:
+      const isThreePhase = pSysKw > 15;
+      const acVoltage = isThreePhase ? 400 : 230;
+      const acFullLoadAmps = isThreePhase ? (pSysKw * 1000) / (400 * 1.732) : (pSysKw * 1000) / 230;
+      const reqAcCurrent = acFullLoadAmps * 1.25; // 125% continuous duty per PEC / NEC 690.8
+
+      let acWireGauge = "#8 AWG (8.0 mm²)";
+      let acWireAmpacity = 50;
+      let acConduit = "25 mm (1\") EMT Conduit";
+
+      if (reqAcCurrent <= 24) {
+        acWireGauge = "#10 AWG (5.5 mm²)";
+        acWireAmpacity = 30;
+        acConduit = "20 mm (3/4\") EMT";
+      } else if (reqAcCurrent <= 36) {
+        acWireGauge = "#8 AWG (8.0 mm²)";
+        acWireAmpacity = 50;
+        acConduit = "25 mm (1\") EMT";
+      } else if (reqAcCurrent <= 52) {
+        acWireGauge = "#6 AWG (14.0 mm²)";
+        acWireAmpacity = 65;
+        acConduit = "32 mm (1-1/4\") EMT";
+      } else if (reqAcCurrent <= 72) {
+        acWireGauge = "#4 AWG (22.0 mm²)";
+        acWireAmpacity = 85;
+        acConduit = "40 mm (1-1/2\") EMT";
+      } else {
+        acWireGauge = "#2 AWG (30.0 mm²)";
+        acWireAmpacity = 115;
+        acConduit = "50 mm (2\") EMT";
+      }
+
+      // Circuit Breaker Specifications (specifically differentiating AC and DC):
+      // 1. DC Circuit Breaker (for PV Array Strings / MPPT input - 1000V DC rated)
+      const dcStdSizes = [16, 20, 25, 32, 40, 50, 63];
+      let dcBreakerAmps = 20;
+      for (let s of dcStdSizes) {
+        if (s >= reqDcCurrent) {
+          dcBreakerAmps = s;
+          break;
+        }
+      }
+      if (reqDcCurrent > 63) dcBreakerAmps = 80;
+
+      // 2. AC Circuit Breaker (for Inverter AC Output / MDP grid tie - 230V AC rated with RCBO)
+      const acStdSizes = [20, 32, 40, 50, 63, 80, 100, 125];
+      let acBreakerAmps = 32;
+      for (let a of acStdSizes) {
+        if (a >= reqAcCurrent) {
+          acBreakerAmps = a;
+          break;
+        }
+      }
+      if (reqAcCurrent > 125) acBreakerAmps = 150;
+
+      const estRoofAreaM2 = (actualCount * 2.58).toFixed(1);
+
+      return {
+        pSysKw,
+        pModWatts,
+        maxThresholdRatio,
+        maxAllowedArrayKw,
+        maxAllowedArrayWatts,
+        autoCount,
+        actualCount,
+        totalArrayWatts,
+        totalArrayKw,
+        deltaPercent,
+        dcAcRatio,
+        isUnderThreshold,
+        thresholdMarginPercent,
+        numStrings,
+        panelsPerString,
+        vmpMod,
+        vocMod,
+        impMod,
+        iscMod,
+        stringVmp,
+        stringVocMax,
+        arrayImp,
+        arrayIsc,
+        reqDcCurrent,
+        dcWireGauge,
+        dcWireAmpacity,
+        dcConduit,
+        dcVoltDrop,
+        isThreePhase,
+        acVoltage,
+        acFullLoadAmps,
+        reqAcCurrent,
+        acWireGauge,
+        acWireAmpacity,
+        acConduit,
+        dcBreakerAmps,
+        acBreakerAmps,
+        estRoofAreaM2
+      };
+    }
+
     function computeSolarMetrics(monthlyKwh, solarWatts, batteryWh) {
       const days = solarState.daysInMonth || 30;
       const dailyKwh = monthlyKwh / days;
@@ -5378,6 +5565,7 @@
       const monthlyBill = monthlyKwh * elecRate;
       const dailyBill = monthlyBill / days;
       const recommendedPkg = getRecommendedPackage(monthlyKwh, solarWatts, batteryWh);
+      const pvArray = computePvArraySpecs(solarWatts, solarState.panelWattage, solarState.pvPanelsCount, solarState.pvStringsCount);
 
       return {
         monthlyKwh,
@@ -5400,7 +5588,8 @@
         usableCapacityWh,
         remainingGridDependencyWh,
         remainingGridDependencyKwh,
-        isSelfSufficient
+        isSelfSufficient,
+        pvArray
       };
     }
 
@@ -5600,11 +5789,7 @@
         }
       }
 
-      if (typeof triggerToast === "function") {
-        triggerToast("Tariff & usage changes applied successfully!", "success");
-      }
-
-      window.renderSolarCalculator(true);
+      window.renderSolarCalculator(false);
     };
 
     window.updateSolarInput = function(field, value) {
@@ -5650,6 +5835,31 @@
       else if (field === 'efficiencyLossRatio') solarState.efficiencyLossRatio = isNaN(num) ? 0.15 : num / 100;
       else if (field === 'peakSunHours') solarState.peakSunHours = isNaN(num) ? 5.0 : num;
       else if (field === 'dodUsableRatio') solarState.dodUsableRatio = isNaN(num) ? 0.80 : num / 100;
+      else if (field === 'panelWattage') {
+        solarState.panelWattage = safeVal > 0 ? safeVal : 550;
+      }
+      else if (field === 'pvPanelsCount') {
+        solarState.pvPanelsCount = safeVal > 0 ? Math.round(safeVal) : null;
+      }
+      else if (field === 'pvStringsCount') {
+        solarState.pvStringsCount = safeVal > 0 ? Math.round(safeVal) : null;
+      }
+
+      // Automatically recalculate all values in real-time without needing an Apply button
+      window.renderSolarCalculator(false);
+    };
+
+    window.stepPvPanels = function(delta) {
+      const m = computeSolarMetrics(solarState.monthlyKwh, solarState.solarWatts, solarState.batteryWh);
+      const current = (typeof solarState.pvPanelsCount === 'number' && solarState.pvPanelsCount > 0) ? solarState.pvPanelsCount : m.pvArray.autoCount;
+      const next = Math.max(1, current + delta);
+      solarState.pvPanelsCount = next;
+      window.renderSolarCalculator(false);
+    };
+
+    window.resetPvPanelsToOptimal = function() {
+      solarState.pvPanelsCount = null;
+      window.renderSolarCalculator(false);
     };
 
     window.renderSolarCalculator = function(forceRebuild = false) {
@@ -5879,6 +6089,111 @@
             </div>
           `;
         }
+
+        // Real-time dynamic updates for PV Array Sizing & Electrical Specifications
+        const outStatusPill = document.getElementById("pv-out-status-pill");
+        if (outStatusPill) {
+          outStatusPill.className = `px-3 py-1 rounded-full text-[11px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 ${m.pvArray.isUnderThreshold ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'}`;
+          outStatusPill.textContent = m.pvArray.isUnderThreshold ? '✅ Within <20% Threshold' : '⚠️ Exceeds 20% Limit';
+        }
+
+        const outTotalKwpHead = document.getElementById("pv-out-total-kwp-head");
+        if (outTotalKwpHead) outTotalKwpHead.textContent = `${m.pvArray.totalArrayKw.toFixed(2)} kWp Array`;
+
+        const outSystemKwHead = document.getElementById("pv-out-system-kw-head");
+        if (outSystemKwHead) outSystemKwHead.textContent = `${m.pvArray.pSysKw.toFixed(1)} kW Inverter`;
+
+        const outRatioBadge = document.getElementById("pv-out-ratio-badge");
+        if (outRatioBadge) {
+          outRatioBadge.className = `px-2 py-0.5 rounded text-xs font-mono font-black ${m.pvArray.isUnderThreshold ? 'bg-emerald-200 text-emerald-950' : 'bg-rose-200 text-rose-950'}`;
+          outRatioBadge.textContent = `${m.pvArray.dcAcRatio.toFixed(2)}x DC:AC (${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}%)`;
+        }
+
+        const outMaxCeiling = document.getElementById("pv-out-max-ceiling");
+        if (outMaxCeiling) outMaxCeiling.textContent = `${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp Max Permitted`;
+
+        const outMarginText = document.getElementById("pv-out-margin-text");
+        if (outMarginText) {
+          outMarginText.className = `text-[11px] font-mono block ${m.pvArray.isUnderThreshold ? 'text-emerald-700' : 'text-rose-700 font-bold'}`;
+          outMarginText.textContent = m.pvArray.isUnderThreshold ? `${m.pvArray.thresholdMarginPercent.toFixed(1)}% Headroom Remaining` : `${Math.abs(m.pvArray.thresholdMarginPercent).toFixed(1)}% Over Threshold Limit!`;
+        }
+
+        const outProgressBar = document.getElementById("pv-out-progress-bar");
+        if (outProgressBar) {
+          outProgressBar.className = `h-full transition-all duration-300 ${m.pvArray.isUnderThreshold ? 'bg-emerald-600' : 'bg-rose-600'}`;
+          outProgressBar.style.width = `${Math.min(100, Math.max(5, (m.pvArray.totalArrayKw / (m.pvArray.pSysKw * 1.35)) * 100))}%`;
+        }
+
+        const outThresholdDesc = document.getElementById("pv-out-threshold-desc");
+        if (outThresholdDesc) {
+          outThresholdDesc.innerHTML = m.pvArray.isUnderThreshold 
+            ? `✔ <strong>Sizing Compliant:</strong> Total panel array capacity is <strong>${m.pvArray.totalArrayKw.toFixed(2)} kWp</strong>, which represents an oversizing of <strong>${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}%</strong> relative to the ${m.pvArray.pSysKw.toFixed(1)} kW system. This is safely below the maximum 20% oversizing threshold (${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp), optimizing inverter clipping and morning/afternoon generation curve without voiding inverter warranty.`
+            : `⚠ <strong>Oversizing Exceeded:</strong> Total panel array capacity is <strong>${m.pvArray.totalArrayKw.toFixed(2)} kWp</strong> (+${m.pvArray.deltaPercent.toFixed(1)}%), which exceeds the 20% relative system capacity limit (${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp). Recommended: Reduce panel count to <strong>${m.pvArray.autoCount} panels</strong> or upgrade inverter capacity to ensure warranty compliance and thermal safety.`;
+        }
+
+        const inputPvPanels = document.getElementById("solar-input-pvPanelsCount");
+        if (inputPvPanels && document.activeElement !== inputPvPanels) {
+          inputPvPanels.value = m.pvArray.actualCount;
+        }
+
+        const inputPanelWatts = document.getElementById("solar-input-panelWattage");
+        if (inputPanelWatts && document.activeElement !== inputPanelWatts) {
+          inputPanelWatts.value = m.pvArray.pModWatts;
+        }
+
+        const inputPvStrings = document.getElementById("solar-input-pvStringsCount");
+        if (inputPvStrings && document.activeElement !== inputPvStrings) {
+          inputPvStrings.value = m.pvArray.numStrings;
+        }
+
+        const outPanelsSummary = document.getElementById("pv-out-panels-summary");
+        if (outPanelsSummary) {
+          outPanelsSummary.textContent = `${m.pvArray.actualCount} panels × ${m.pvArray.pModWatts}W = ${(m.pvArray.totalArrayWatts/1000).toFixed(2)} kWp`;
+        }
+
+        const outStringsBadge = document.getElementById("pv-out-strings-badge");
+        if (outStringsBadge) {
+          outStringsBadge.textContent = `${m.pvArray.numStrings} ${m.pvArray.numStrings === 1 ? 'String' : 'Parallel Strings'}`;
+        }
+
+        const outStringVoltage = document.getElementById("pv-out-string-voltage");
+        if (outStringVoltage) {
+          outStringVoltage.textContent = `Operating Vmp: ~${m.pvArray.stringVmp.toFixed(0)}V DC | Max Voc: ~${m.pvArray.stringVocMax.toFixed(0)}V DC`;
+        }
+
+        const outDcWireBadge = document.getElementById("pv-out-dc-wire-badge");
+        if (outDcWireBadge) outDcWireBadge.textContent = `${m.pvArray.dcWireGauge} THHN`;
+
+        const outDcWireAmp = document.getElementById("pv-out-dc-wire-amp");
+        if (outDcWireAmp) outDcWireAmp.textContent = `${m.pvArray.dcWireAmpacity}A (90°C)`;
+
+        const outDcWireReq = document.getElementById("pv-out-dc-wire-req");
+        if (outDcWireReq) outDcWireReq.textContent = `${m.pvArray.reqDcCurrent.toFixed(1)}A DC`;
+
+        const outDcConduit = document.getElementById("pv-out-dc-conduit");
+        if (outDcConduit) outDcConduit.textContent = m.pvArray.dcConduit;
+
+        const outDcDrop = document.getElementById("pv-out-dc-drop");
+        if (outDcDrop) outDcDrop.textContent = m.pvArray.dcVoltDrop;
+
+        const outAcWireBadge = document.getElementById("pv-out-ac-wire-badge");
+        if (outAcWireBadge) outAcWireBadge.textContent = `${m.pvArray.acWireGauge} THHN`;
+
+        const outAcWireAmp = document.getElementById("pv-out-ac-wire-amp");
+        if (outAcWireAmp) outAcWireAmp.textContent = `${m.pvArray.acWireAmpacity}A (90°C)`;
+
+        const outAcWireReq = document.getElementById("pv-out-ac-wire-req");
+        if (outAcWireReq) outAcWireReq.textContent = `${m.pvArray.acFullLoadAmps.toFixed(1)}A (${m.pvArray.reqAcCurrent.toFixed(1)}A Design)`;
+
+        const outAcConduit = document.getElementById("pv-out-ac-conduit");
+        if (outAcConduit) outAcConduit.textContent = m.pvArray.acConduit;
+
+        const outDcBreakerBadge = document.getElementById("pv-out-dc-breaker-badge");
+        if (outDcBreakerBadge) outDcBreakerBadge.textContent = `${m.pvArray.dcBreakerAmps}A DC MCB (2-Pole)`;
+
+        const outAcBreakerBadge = document.getElementById("pv-out-ac-breaker-badge");
+        if (outAcBreakerBadge) outAcBreakerBadge.textContent = `${m.pvArray.acBreakerAmps}A AC MCB (2-Pole)`;
+
         return;
       }
 
@@ -5988,10 +6303,10 @@
                 </svg>
                 Electricity Tariff & Usage Configuration
               </h3>
-              <p class="text-xs text-stone-500 mt-0.5">Define electricity rate per kWh, enter usage in kWh or total bill amount (₱), and click Apply</p>
+              <p class="text-xs text-stone-500 mt-0.5">Define electricity rate per kWh and monthly usage (kWh or ₱ bill) — recalculates automatically in real time</p>
             </div>
 
-            <!-- Controls: Mode Selector & Apply Button -->
+            <!-- Controls: Mode Selector & Live Status -->
             <div class="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-auto">
               <!-- Mode Selector Tabs -->
               <div class="flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
@@ -6011,18 +6326,11 @@
                 </button>
               </div>
 
-              <!-- APPLY BUTTON -->
-              <button 
-                type="button" 
-                onclick="window.applyTariffAndUsageChanges()"
-                class="px-4 py-2 rounded-xl bg-[#05300a] hover:bg-[#084214] active:scale-95 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
-                title="Apply entered tariff and usage values to update proposal calculations"
-              >
-                <svg class="w-4 h-4 text-[#c8ac0c] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Apply</span>
-              </button>
+              <!-- Real-time Live Badge (No Apply button needed) -->
+              <div class="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0" title="Calculations update instantly as you type">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Real-Time</span>
+              </div>
             </div>
           </div>
 
@@ -6147,17 +6455,11 @@
                 </button>
               </div>
 
-              <button 
-                type="button" 
-                onclick="window.applyTariffAndUsageChanges()"
-                class="px-4 py-2 rounded-xl bg-[#05300a] hover:bg-[#084214] active:scale-95 text-white text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
-                title="Apply entered hardware values to update proposal calculations"
-              >
-                <svg class="w-4 h-4 text-[#c8ac0c] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Apply</span>
-              </button>
+              <!-- Real-time live status indicator -->
+              <div class="px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-[#05300a] text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0" title="All changes calculate automatically in real time">
+                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span>Auto-Updated</span>
+              </div>
             </div>
           </div>
 
