@@ -328,16 +328,10 @@ export default function FreeQuotePage() {
     e.preventDefault();
     if (formData.firstName.trim() && formData.phone.trim()) {
       const docAssets: any[] = [];
-      try {
-        const doc = createPDFDocumentInstance();
-        const dataUri = doc.output('datauristring');
-        docAssets.push({
-          url: dataUri,
-          label: `Client_Solar_ROI_Estimate_Report`
-        });
-      } catch (err) {
-        console.error("Failed to generate custom client ROI document:", err);
-      }
+      docAssets.push({
+        url: "",
+        label: `Client_Solar_ROI_Estimate_Report.pdf`
+      });
 
       submitInboundLead({
         name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),

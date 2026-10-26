@@ -1,11 +1,17 @@
+-- =============================================================
 -- Supabase Database Schema for Powershift Solar Installation Services
--- This file defines the tables, row-level security (RLS) policies, and seed data matching the app structures.
+-- Centralized Data & Media Bucket Infrastructure
+-- =============================================================
+-- This schema establishes all relational tables, the dedicated 'photobucket' 
+-- storage bucket & media registry for admin image uploads, Row-Level Security 
+-- (RLS) policies, performance indexes, and initial seed datasets.
 
 -- -------------------------------------------------------------
 -- 1. Database Schema Definitions
 -- -------------------------------------------------------------
 
--- Drop existing tables if they exist (for easy re-running)
+-- Drop existing tables if they exist (for clean deployment and migrations)
+DROP TABLE IF EXISTS public.photobucket CASCADE;
 DROP TABLE IF EXISTS public.leads CASCADE;
 DROP TABLE IF EXISTS public.packages CASCADE;
 DROP TABLE IF EXISTS public.products CASCADE;
@@ -14,9 +20,36 @@ DROP TABLE IF EXISTS public.meetings CASCADE;
 DROP TABLE IF EXISTS public.special_offers CASCADE;
 DROP TABLE IF EXISTS public.system_config CASCADE;
 
+-- -------------------------------------------------------------
+-- Photobucket: Central repository for all admin-uploaded pictures
+-- Stores image metadata, URLs, storage paths, associated entity links,
+-- and categorized tags for portfolio, products, flyers, and site audits.
+-- -------------------------------------------------------------
+CREATE TABLE public.photobucket (
+    id TEXT PRIMARY KEY, -- e.g. 'PHOTO-2026-001', 'PB-001' or UUID
+    file_name TEXT NOT NULL,
+    file_url TEXT NOT NULL, -- Public CDN or Supabase Storage bucket URL
+    storage_path TEXT, -- Internal storage path, e.g. 'photobucket/portfolio/array-1.jpg'
+    bucket_name TEXT NOT NULL DEFAULT 'photobucket',
+    mime_type TEXT NOT NULL DEFAULT 'image/jpeg',
+    file_size_bytes BIGINT NOT NULL DEFAULT 0,
+    width INTEGER,
+    height INTEGER,
+    title TEXT,
+    caption TEXT,
+    category TEXT NOT NULL DEFAULT 'General', -- 'Portfolio', 'Product', 'Flyers', 'Site Audit', 'Branding', 'General'
+    entity_type TEXT, -- 'portfolio', 'products', 'special_offers', 'leads', 'system'
+    entity_id TEXT, -- Associated record ID (e.g. 'PROJ-206-01', 'PROD-206-10')
+    uploaded_by TEXT NOT NULL DEFAULT 'Admin',
+    is_public BOOLEAN NOT NULL DEFAULT true,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Portfolio / Projects Table
 CREATE TABLE public.portfolio (
-    id TEXT PRIMARY KEY, -- Matches the string IDs like 'PROJ-206-01'
+    id TEXT PRIMARY KEY, -- String IDs like 'PROJ-206-01'
     name TEXT NOT NULL,
     segment TEXT NOT NULL DEFAULT 'Residential',
     capacity TEXT NOT NULL,
@@ -26,7 +59,7 @@ CREATE TABLE public.portfolio (
     description TEXT NOT NULL,
     images JSONB NOT NULL DEFAULT '[]'::jsonb,
     client_name TEXT,
-    location TEXT, -- Geographic Location added for admin dashboard parity
+    location TEXT, -- Geographic location matching admin dashboard
     hide_segment TEXT,
     roi_savings TEXT,
     case_study_overview TEXT,
@@ -38,7 +71,7 @@ CREATE TABLE public.portfolio (
 
 -- Products Table
 CREATE TABLE public.products (
-    id TEXT PRIMARY KEY, -- Matches the string IDs like 'PROD-206-10'
+    id TEXT PRIMARY KEY, -- String IDs like 'PROD-206-10'
     name TEXT NOT NULL,
     category TEXT NOT NULL,
     stock TEXT NOT NULL DEFAULT '0 Units',
@@ -53,20 +86,20 @@ CREATE TABLE public.products (
 
 -- Packages Table
 CREATE TABLE public.packages (
-    id TEXT PRIMARY KEY, -- Matches the string IDs like 'PKG-206-20'
+    id TEXT PRIMARY KEY, -- String IDs like 'PKG-206-20'
     name TEXT NOT NULL,
     tier TEXT NOT NULL,
     capacity TEXT NOT NULL,
     ribbon TEXT NOT NULL DEFAULT 'None',
-    on_grid_price TEXT NOT NULL, -- Stored as text to match php prices or formatted numbers
+    on_grid_price TEXT NOT NULL,
     hybrid_price TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'Active',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Leads Table (For Free Quote form submissions)
+-- Leads Table (Free Quote & Site Inquiry form submissions)
 CREATE TABLE public.leads (
-    id TEXT PRIMARY KEY, -- Matches string IDs like 'LEAD-206-30'
+    id TEXT PRIMARY KEY, -- String IDs like 'LEAD-206-30'
     name TEXT NOT NULL,
     contact TEXT NOT NULL,
     service TEXT NOT NULL,
@@ -94,7 +127,7 @@ CREATE TABLE public.meetings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Special Offers / Promos Table
+-- Special Offers / Promotional Flyers Table
 CREATE TABLE public.special_offers (
     id TEXT PRIMARY KEY,
     image TEXT NOT NULL,
@@ -111,8 +144,41 @@ CREATE TABLE public.system_config (
 );
 
 -- -------------------------------------------------------------
--- 2. Indexes for Performance Optimization
+-- 2. Supabase Storage Configuration (photobucket)
 -- -------------------------------------------------------------
+-- Initialize the dedicated 'photobucket' storage bucket in Supabase Storage.
+-- This bucket holds all raw binary picture files uploaded by the admin.
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'photobucket',
+    'photobucket',
+    true,
+    52428800, -- 50 Megabytes maximum per picture
+    ARRAY[
+        'image/png',
+        'image/jpeg',
+        'image/jpg',
+        'image/webp',
+        'image/gif',
+        'image/svg+xml',
+        'image/heic',
+        'image/heif'
+    ]
+)
+ON CONFLICT (id) DO UPDATE SET 
+    public = EXCLUDED.public,
+    file_size_limit = EXCLUDED.file_size_limit,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- -------------------------------------------------------------
+-- 3. Indexes for Performance & Scalability
+-- -------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_photobucket_category ON public.photobucket(category);
+CREATE INDEX IF NOT EXISTS idx_photobucket_entity ON public.photobucket(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_photobucket_created_at ON public.photobucket(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_photobucket_bucket_name ON public.photobucket(bucket_name);
+CREATE INDEX IF NOT EXISTS idx_photobucket_uploaded_by ON public.photobucket(uploaded_by);
+
 CREATE INDEX IF NOT EXISTS idx_portfolio_segment ON public.portfolio(segment);
 CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category);
 CREATE INDEX IF NOT EXISTS idx_leads_status ON public.leads(status);
@@ -121,10 +187,11 @@ CREATE INDEX IF NOT EXISTS idx_meetings_status ON public.meetings(status);
 CREATE INDEX IF NOT EXISTS idx_special_offers_timestamp ON public.special_offers(timestamp DESC);
 
 -- -------------------------------------------------------------
--- 3. Row-Level Security (RLS) Configuration
+-- 4. Row-Level Security (RLS) Configuration
 -- -------------------------------------------------------------
 
--- Enable RLS for all tables
+-- Enable RLS on all relational tables
+ALTER TABLE public.photobucket ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.portfolio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.packages ENABLE ROW LEVEL SECURITY;
@@ -132,6 +199,40 @@ ALTER TABLE public.leads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.special_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+
+-- Photobucket Table Security Policies
+DROP POLICY IF EXISTS "Allow public read access to photobucket" ON public.photobucket;
+CREATE POLICY "Allow public read access to photobucket"
+    ON public.photobucket FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Allow public read/write access to photobucket" ON public.photobucket;
+CREATE POLICY "Allow public read/write access to photobucket" 
+    ON public.photobucket FOR ALL 
+    USING (true) 
+    WITH CHECK (true);
+
+-- Storage Objects Policies for 'photobucket' Bucket
+DROP POLICY IF EXISTS "Public can view images in photobucket" ON storage.objects;
+CREATE POLICY "Public can view images in photobucket"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'photobucket');
+
+DROP POLICY IF EXISTS "Allow upload to photobucket" ON storage.objects;
+CREATE POLICY "Allow upload to photobucket"
+    ON storage.objects FOR INSERT
+    WITH CHECK (bucket_id = 'photobucket');
+
+DROP POLICY IF EXISTS "Allow update to photobucket" ON storage.objects;
+CREATE POLICY "Allow update to photobucket"
+    ON storage.objects FOR UPDATE
+    USING (bucket_id = 'photobucket')
+    WITH CHECK (bucket_id = 'photobucket');
+
+DROP POLICY IF EXISTS "Allow delete from photobucket" ON storage.objects;
+CREATE POLICY "Allow delete from photobucket"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'photobucket');
 
 -- Portfolio Security Policies
 DROP POLICY IF EXISTS "Allow public read/write access to portfolio" ON public.portfolio;
@@ -183,8 +284,134 @@ CREATE POLICY "Allow public read/write access to system_config"
     WITH CHECK (true);
 
 -- -------------------------------------------------------------
--- 4. Initial Seed Data
+-- 5. Helper Functions & Triggers
 -- -------------------------------------------------------------
+
+-- Automatically update updated_at timestamp on photobucket records
+CREATE OR REPLACE FUNCTION public.handle_photobucket_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = timezone('utc'::text, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_photobucket_updated_at ON public.photobucket;
+CREATE TRIGGER trigger_photobucket_updated_at
+    BEFORE UPDATE ON public.photobucket
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_photobucket_updated_at();
+
+-- Aggregated Photobucket Summary View by Category
+CREATE OR REPLACE VIEW public.photobucket_summary AS
+SELECT 
+    category,
+    COUNT(*) AS total_pictures,
+    COALESCE(SUM(file_size_bytes), 0) AS total_bytes,
+    ROUND(COALESCE(SUM(file_size_bytes), 0) / 1048576.0, 2) AS total_megabytes,
+    MAX(created_at) AS latest_upload_at
+FROM public.photobucket
+GROUP BY category
+ORDER BY total_pictures DESC;
+
+-- -------------------------------------------------------------
+-- 6. Initial Seed Data
+-- -------------------------------------------------------------
+
+-- Seed Photobucket (Central Admin Picture Bucket)
+INSERT INTO public.photobucket (
+    id, file_name, file_url, storage_path, bucket_name, mime_type, file_size_bytes, title, caption, category, entity_type, entity_id, uploaded_by
+) VALUES 
+(
+    'PHOTO-101', 
+    'qc-residential-pv-array.jpg', 
+    'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=800&q=80', 
+    'photobucket/portfolio/qc-residential-pv-array.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    245000, 
+    'Quezon City Residential Array', 
+    'High-efficiency residential PV setup with Tier-1 monocrystalline panels', 
+    'Portfolio', 
+    'portfolio', 
+    'PROJ-206-01', 
+    'Admin'
+),
+(
+    'PHOTO-102', 
+    'cavite-cold-storage-grid.jpg', 
+    'https://solenergy.com.ph/wp-content/uploads/2021/09/DJI_0751-1-1024x768.jpg', 
+    'photobucket/portfolio/cavite-cold-storage-grid.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    512000, 
+    'Cavite Cold Storage Solar Grid', 
+    'Industrial cold storage backup array with automatic transfer', 
+    'Portfolio', 
+    'portfolio', 
+    'PROJ-206-02', 
+    'Admin'
+),
+(
+    'PHOTO-103', 
+    'mandaluyong-penthouse-array.jpg', 
+    'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=800&q=80', 
+    'photobucket/portfolio/mandaluyong-penthouse-array.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    198000, 
+    'Mandaluyong Penthouse Eco Array', 
+    'Urban rooftop ultra-low profile mounting system', 
+    'Portfolio', 
+    'portfolio', 
+    'PROJ-206-04', 
+    'Admin'
+),
+(
+    'PHOTO-104', 
+    'dah-solar-450w-mono.jpg', 
+    'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=600&q=80', 
+    'photobucket/products/dah-solar-450w-mono.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    185000, 
+    'Tier-1 450W Mono PV Panel', 
+    'High-density multi-busbar monocrystalline solar panel', 
+    'Product', 
+    'products', 
+    'PROD-206-10', 
+    'Admin'
+),
+(
+    'PHOTO-105', 
+    'deye-hybrid-10kw-inverter.jpg', 
+    'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=600&q=80', 
+    'photobucket/products/deye-hybrid-10kw-inverter.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    192000, 
+    'Hybrid 10kW Smart Inverter', 
+    'Seamless power transfer grid-tied hybrid controller engine', 
+    'Product', 
+    'products', 
+    'PROD-206-11', 
+    'Admin'
+),
+(
+    'PHOTO-106', 
+    'powershift-summer-promo-banner.jpg', 
+    'https://images.unsplash.com/photo-1548613053-22008fb56e7e?auto=format&fit=crop&w=600&q=80', 
+    'photobucket/offers/powershift-summer-promo-banner.jpg', 
+    'photobucket', 
+    'image/jpeg', 
+    320000, 
+    'Summer 2026 Solar Package Promo', 
+    'Exclusive discount flyer campaign for hybrid solar installations', 
+    'Flyers', 
+    'special_offers', 
+    'FLYER-901', 
+    'Admin'
+);
 
 -- Seed Portfolio
 INSERT INTO public.portfolio (
@@ -359,5 +586,7 @@ INSERT INTO public.special_offers (
 INSERT INTO public.system_config (key, value) VALUES 
 ('social_facebook', 'https://facebook.com/powershift'),
 ('social_instagram', 'https://instagram.com/powershift'),
-('social_tiktok', 'https://tiktok.com/@powershift')
+('social_tiktok', 'https://tiktok.com/@powershift'),
+('photobucket_bucket_name', 'photobucket'),
+('photobucket_max_mb', '50')
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

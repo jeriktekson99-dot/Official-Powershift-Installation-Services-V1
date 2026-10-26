@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { SyncDb, ProjectRecord, ProductRecord, PackageRecord, LeadRecord, MeetingRecord, SpecialOfferRecord } from '../sync.ts';
+import { SyncDb, ProjectRecord, ProductRecord, PackageRecord, LeadRecord, MeetingRecord, SpecialOfferRecord, PhotobucketRecord } from '../sync.ts';
 
 // Get Supabase environment variables from import.meta.env (Vite standard)
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
@@ -191,7 +191,7 @@ export const supabaseService = {
     try {
       const { data, error } = await supabase
         .from('meetings')
-        .select('id, client_name, date, time, type, personnel, location, notes, status, title')
+        .select('id, client_name, date, time, type, personnel, location, notes, status')
         .order('date', { ascending: true });
 
       if (error) {
@@ -298,6 +298,117 @@ export const supabaseService = {
       return data as { key: string; value: string }[];
     } catch (err: any) {
       console.log('Network or configuration error fetching system_config from Supabase:', err.message || err);
+      throw err;
+    }
+  },
+
+  /**
+   * Fetch pictures from the photobucket media catalog
+   */
+  async getPhotobucketPictures(category?: string): Promise<PhotobucketRecord[]> {
+    try {
+      let query = supabase
+        .from('photobucket')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.log('Error fetching photobucket from Supabase:', error.message);
+        throw error;
+      }
+
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        fileName: p.file_name,
+        fileUrl: p.file_url,
+        storagePath: p.storage_path,
+        bucketName: p.bucket_name,
+        mimeType: p.mime_type,
+        fileSizeBytes: p.file_size_bytes,
+        width: p.width,
+        height: p.height,
+        title: p.title,
+        caption: p.caption,
+        category: p.category,
+        entityType: p.entity_type,
+        entityId: p.entity_id,
+        uploadedBy: p.uploaded_by,
+        isPublic: p.is_public,
+        metadata: p.metadata,
+        createdAt: p.created_at,
+        updatedAt: p.updated_at,
+      })) as PhotobucketRecord[];
+    } catch (err: any) {
+      console.log('Network or configuration error fetching photobucket from Supabase:', err.message || err);
+      throw err;
+    }
+  },
+
+  /**
+   * Register a new admin-uploaded picture into the photobucket catalog
+   */
+  async registerPhotobucketPicture(record: Partial<PhotobucketRecord> & { fileName: string; fileUrl: string }): Promise<PhotobucketRecord> {
+    const id = record.id || `PHOTO-${Date.now()}`;
+    const payload = {
+      id,
+      file_name: record.fileName,
+      file_url: record.fileUrl,
+      storage_path: record.storagePath || `photobucket/uploads/${record.fileName}`,
+      bucket_name: record.bucketName || 'photobucket',
+      mime_type: record.mimeType || 'image/jpeg',
+      file_size_bytes: record.fileSizeBytes || 0,
+      width: record.width || null,
+      height: record.height || null,
+      title: record.title || record.fileName,
+      caption: record.caption || '',
+      category: record.category || 'General',
+      entity_type: record.entityType || 'general',
+      entity_id: record.entityId || null,
+      uploaded_by: record.uploadedBy || 'Admin',
+      is_public: record.isPublic ?? true,
+      metadata: record.metadata || {},
+    };
+
+    try {
+      const { data, error } = await supabase
+        .from('photobucket')
+        .upsert(payload)
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Error inserting picture to photobucket:', error.message);
+        throw error;
+      }
+
+      return {
+        id: data.id,
+        fileName: data.file_name,
+        fileUrl: data.file_url,
+        storagePath: data.storage_path,
+        bucketName: data.bucket_name,
+        mimeType: data.mime_type,
+        fileSizeBytes: data.file_size_bytes,
+        width: data.width,
+        height: data.height,
+        title: data.title,
+        caption: data.caption,
+        category: data.category,
+        entityType: data.entity_type,
+        entityId: data.entity_id,
+        uploadedBy: data.uploaded_by,
+        isPublic: data.is_public,
+        metadata: data.metadata,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (err: any) {
+      console.log('Network or configuration error inserting to photobucket:', err.message || err);
       throw err;
     }
   }

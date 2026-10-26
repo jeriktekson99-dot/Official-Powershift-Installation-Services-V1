@@ -1582,28 +1582,6 @@
             </div>
             
             <form id="create-meeting-form" onsubmit="window.onSaveMeeting(event)">
-              <!-- Pre-fill from Lead Quick Selector -->
-              <div class="mb-4 p-3 bg-stone-50 rounded-xl border border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-                <div class="flex items-center gap-2">
-                  <span class="p-1 bg-emerald-50 text-emerald-800 rounded border border-emerald-100 shrink-0">
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </span>
-                  <div>
-                    <h5 class="text-[10px] font-mono font-bold text-stone-700 uppercase tracking-wider leading-none">Link Inbound Lead or Query</h5>
-                    <p class="text-[9px] text-stone-400 font-mono mt-0.5 leading-none">Pre-fill details from an active inbound inquiry record</p>
-                  </div>
-                </div>
-                <select 
-                  id="meet-form-lead-select" 
-                  onchange="window.onSelectLeadForMeeting(this.value)"
-                  class="bg-white border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 cursor-pointer min-w-[200px]"
-                >
-                  <option value="">-- Select Active Lead --</option>
-                </select>
-              </div>
-
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Client / Contact Name -->
                 <div class="flex flex-col gap-1">
@@ -2179,97 +2157,51 @@
         localStorage.setItem("powershift_db_dirty", "true");
         window.dispatchEvent(new Event('powershift_db_update'));
       } catch (e) {
-        console.warn("Storage write failed. Entering progressive pruning and recovery mode in admin.html:", e);
+        console.warn("Storage write failed. Entering image stripping to protect records in admin.html:", e);
         
-        // 1. Try to prune/strip images from ALL leads first as they consume the most space (base64 images)
+        // Strip heavy base64 images from leads, but NEVER delete the leads themselves!
         if (db && db.leads && db.leads.length > 0) {
-          let hadImages = false;
           db.leads.forEach(lead => {
             if (lead.images && lead.images.length > 0) {
-              lead.images = [];
-              hadImages = true;
+              lead.images = lead.images.map(img => {
+                const url = typeof img === 'string' ? img : (img && img.url ? img.url : '');
+                const label = (img && img.label) ? img.label : 'Document Attachment';
+                if (url && (url.startsWith('data:') || url.length > 500)) {
+                  return { url: '', label };
+                }
+                return img;
+              });
             }
           });
-          if (hadImages) {
-            try {
-              localStorage.setItem("powershift_db", JSON.stringify(db));
-              localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
-              window.dispatchEvent(new Event('powershift_db_update'));
-              console.log("Successfully saved database after stripping all lead images.");
-              if (typeof renderLeadsTable === "function") {
-                renderLeadsTable();
-              }
-              return;
-            } catch (err1) {
-              console.warn("Save still failed after stripping all lead images, continuing pruning...");
-            }
-          }
-          
-          // 2. Try slicing leads to latest 10
-          if (db.leads.length > 10) {
-            db.leads = db.leads.slice(0, 10);
-            try {
-              localStorage.setItem("powershift_db", JSON.stringify(db));
-              localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
-              window.dispatchEvent(new Event('powershift_db_update'));
-              console.log("Successfully saved database after pruning to 10 latest leads.");
-              if (typeof renderLeadsTable === "function") {
-                renderLeadsTable();
-              }
-              return;
-            } catch (err2) {
-              console.warn("Save failed after pruning to 10 leads, continuing...");
-            }
-          }
-          
-          // 3. Try slicing leads to latest 3
-          if (db.leads.length > 3) {
-            db.leads = db.leads.slice(0, 3);
-            try {
-              localStorage.setItem("powershift_db", JSON.stringify(db));
-              localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
-              window.dispatchEvent(new Event('powershift_db_update'));
-              console.log("Successfully saved database after pruning to 3 latest leads.");
-              if (typeof renderLeadsTable === "function") {
-                renderLeadsTable();
-              }
-              return;
-            } catch (err3) {
-              console.warn("Save failed after pruning to 3 leads, continuing...");
-            }
-          }
-
-          // 4. Try slicing leads to latest 1
-          if (db.leads.length > 1) {
-            db.leads = db.leads.slice(0, 1);
-            try {
-              localStorage.setItem("powershift_db", JSON.stringify(db));
-              localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
-              window.dispatchEvent(new Event('powershift_db_update'));
-              console.log("Successfully saved database after pruning to 1 latest lead.");
-              if (typeof renderLeadsTable === "function") {
-                renderLeadsTable();
-              }
-              return;
-            } catch (err4) {
-              console.warn("Save failed after pruning to 1 lead, continuing...");
-            }
-          }
-
-          // 5. Try completely clearing leads array
-          db.leads = [];
           try {
             localStorage.setItem("powershift_db", JSON.stringify(db));
             localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
             window.dispatchEvent(new Event('powershift_db_update'));
-            console.log("Successfully saved database after completely clearing leads.");
+            console.log("Successfully saved database after stripping heavy base64 lead images.");
             if (typeof renderLeadsTable === "function") {
               renderLeadsTable();
             }
             return;
-          } catch (err5) {
-            console.warn("Save failed even after completely clearing leads.");
+          } catch (err1) {
+            console.warn("Save still failed after stripping heavy lead images, stripping all images...");
           }
+        }
+
+        // Secondary fallback: strip images from portfolio and products, but keep all lead rows
+        if (db.portfolio) {
+          db.portfolio.forEach(p => { if (p.images && p.images.length > 1) p.images = p.images.slice(0, 1); });
+        }
+        try {
+          localStorage.setItem("powershift_db", JSON.stringify(db));
+          localStorage.setItem("powershift_categories", JSON.stringify(categoriesState));
+          window.dispatchEvent(new Event('powershift_db_update'));
+          console.log("Successfully saved database after pruning secondary assets.");
+          if (typeof renderLeadsTable === "function") {
+            renderLeadsTable();
+          }
+          return;
+        } catch (err2) {
+          console.warn("Secondary pruning write failed.");
         }
 
         // 6. Final attempt: Empty trash, logs, and other ancillary lists
@@ -2766,6 +2698,15 @@
     window.addEventListener("powershift_assessments_update", () => {
       loadAssessments();
       renderDashboard();
+    });
+
+    window.addEventListener("powershift_meetings_update", () => {
+      loadMeetings();
+      renderDashboard();
+      const modal = document.getElementById("scheduling-deck-modal");
+      if (modal && !modal.classList.contains("hidden") && typeof window.renderSchedulingDeck === "function") {
+        window.renderSchedulingDeck();
+      }
     });
 
     // Operational Sector Database Specifications (Dynamic Field Schemas & Headers)
@@ -4514,7 +4455,20 @@
 
         meetings.push(newMeet);
         saveMeetings();
+        fetch('/api/meetings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newMeet)
+        }).catch(() => {});
         window.closeCreateMeetingModal();
+        if (date) {
+          const parts = date.split('-');
+          if (parts.length === 3) {
+            calendarYear = parseInt(parts[0], 10);
+            calendarMonth = parseInt(parts[1], 10) - 1;
+            selectedDayFilter = parseInt(parts[2], 10);
+          }
+        }
         window.renderSchedulingDeck();
         triggerToast(`Appointment scheduled successfully for ${client}!`, "success");
       };
@@ -4533,6 +4487,13 @@
       window.showConfirmDialog("Are you sure you want to permanently delete this scheduled appointment?", () => {
         meetings = meetings.filter(m => m.id !== id);
         saveMeetings();
+        if (typeof supabase !== "undefined" && supabase && typeof supabase.from === "function") {
+          supabase.from('meetings').delete().eq('id', id).then(() => {
+            console.log(`[Powershift Admin Sync] Explicitly deleted meeting ${id} from Supabase.`);
+          }).catch(err => {
+            console.warn(`[Powershift Admin Sync] Failed to delete meeting ${id} from remote:`, err);
+          });
+        }
         window.renderSchedulingDeck();
         triggerToast("Appointment has been deleted.", "warning");
       });
@@ -10793,7 +10754,7 @@
           console.log("[Powershift Admin Sync] Pulling fresh data from Supabase to synchronize locally...");
 
           // 1. Pull Meetings
-          const { data: remoteMeetings, error: meetErr } = await supabase.from('meetings').select('id, client_name, date, time, type, personnel, location, notes, status, title');
+          const { data: remoteMeetings, error: meetErr } = await supabase.from('meetings').select('id, client_name, date, time, type, personnel, location, notes, status');
           if (!meetErr && remoteMeetings) {
             const mappedMeetings = remoteMeetings.map(m => ({
               id: m.id,
@@ -10803,12 +10764,30 @@
               type: m.type,
               personnel: m.personnel || 'Unassigned Team',
               location: m.location,
-              notes: m.notes,
-              status: m.status,
-              title: m.title || `Appointment - ${m.client_name || 'Client'}`
+              notes: m.notes || '',
+              status: m.status || 'Scheduled',
+              title: m.type ? `${m.type} - ${m.client_name || 'Client'}` : `Appointment - ${m.client_name || 'Client'}`
             }));
-            localStorage.setItem("powershift_meetings", JSON.stringify(mappedMeetings));
-            console.log(`[Powershift Admin Sync] Pulled ${mappedMeetings.length} meetings from Supabase.`);
+
+            // Merge with local meetings to ensure unsynced or newly created meetings are NEVER lost
+            const currentMeetingsStr = localStorage.getItem("powershift_meetings");
+            let localMeetingsList = [];
+            if (currentMeetingsStr) {
+              try { localMeetingsList = JSON.parse(currentMeetingsStr) || []; } catch(e) {}
+            }
+            const meetingMap = new Map();
+            localMeetingsList.forEach(m => meetingMap.set(m.id, m));
+            mappedMeetings.forEach(m => {
+              if (meetingMap.has(m.id)) {
+                meetingMap.set(m.id, { ...meetingMap.get(m.id), ...m });
+              } else {
+                meetingMap.set(m.id, m);
+              }
+            });
+            const mergedMeetings = Array.from(meetingMap.values());
+            meetings = mergedMeetings;
+            localStorage.setItem("powershift_meetings", JSON.stringify(mergedMeetings));
+            console.log(`[Powershift Admin Sync] Merged ${mergedMeetings.length} meetings locally with Supabase.`);
           }
 
           // 2. Pull Leads (from 'leads' table)
@@ -10828,8 +10807,28 @@
               propertyType: l.property_type || 'Residential'
             }));
 
+            // Merge with local db to ensure newly submitted local inquiries are NEVER lost
+            const currentDbStr = localStorage.getItem("powershift_db");
+            let localDb = { portfolio: [], products: [], packages: [], leads: [], trash: [] };
+            if (currentDbStr) {
+              try {
+                localDb = JSON.parse(currentDbStr);
+              } catch (e) {}
+            }
+            const existingLeads = Array.isArray(localDb.leads) ? localDb.leads : [];
+            const leadsMap = new Map();
+            existingLeads.forEach(l => leadsMap.set(l.id, l));
+            mappedLeads.forEach(l => {
+              if (leadsMap.has(l.id)) {
+                leadsMap.set(l.id, { ...leadsMap.get(l.id), ...l });
+              } else {
+                leadsMap.set(l.id, l);
+              }
+            });
+            const mergedLeads = Array.from(leadsMap.values());
+
             // Sort leads so that the newest ones are first
-            mappedLeads.sort((a, b) => {
+            mergedLeads.sort((a, b) => {
               const dateA = a.date ? new Date(a.date).getTime() : 0;
               const dateB = b.date ? new Date(b.date).getTime() : 0;
               if (dateB !== dateA) {
@@ -10838,17 +10837,10 @@
               return String(b.id).localeCompare(String(a.id));
             });
 
-            // Merge with local db
-            const currentDbStr = localStorage.getItem("powershift_db");
-            let localDb = { portfolio: [], products: [], packages: [], leads: [], trash: [] };
-            if (currentDbStr) {
-              try {
-                localDb = JSON.parse(currentDbStr);
-              } catch (e) {}
-            }
-            localDb.leads = mappedLeads;
+            localDb.leads = mergedLeads;
+            db.leads = mergedLeads;
             localStorage.setItem("powershift_db", JSON.stringify(localDb));
-            console.log(`[Powershift Admin Sync] Pulled ${mappedLeads.length} leads from Supabase.`);
+            console.log(`[Powershift Admin Sync] Merged ${mergedLeads.length} leads locally with Supabase.`);
           }
 
           // 3. Pull Portfolio
@@ -11108,15 +11100,6 @@
           // 4. Sync Leads Table
           if (db.leads) {
             try {
-              const { data: remoteLeads, error: fetchErr } = await supabase.from('leads').select('id');
-              if (window.supabasePullCompleted && !fetchErr && remoteLeads) {
-                const localLeadsIds = db.leads.map(l => l.id);
-                const leadsIdsToDelete = remoteLeads.map(l => l.id).filter(id => !localLeadsIds.includes(id));
-                if (leadsIdsToDelete.length > 0) {
-                  await supabase.from('leads').delete().in('id', leadsIdsToDelete);
-                  console.log(`[Powershift Admin Sync] Pruned ${leadsIdsToDelete.length} stale leads from Supabase.`);
-                }
-              }
               if (db.leads.length > 0) {
                 const upsertData = db.leads.map(l => ({
                   id: l.id,
@@ -11150,15 +11133,6 @@
         if (!data) return;
         try {
           const meetings = JSON.parse(data);
-          const { data: remoteMeetings, error: fetchErr } = await supabase.from('meetings').select('id');
-          if (window.supabasePullCompleted && !fetchErr && remoteMeetings) {
-            const localMeetingIds = meetings.map(m => m.id);
-            const meetingIdsToDelete = remoteMeetings.map(m => m.id).filter(id => !localMeetingIds.includes(id));
-            if (meetingIdsToDelete.length > 0) {
-              await supabase.from('meetings').delete().in('id', meetingIdsToDelete);
-              console.log(`[Powershift Admin Sync] Pruned ${meetingIdsToDelete.length} stale meetings from Supabase.`);
-            }
-          }
           if (meetings.length > 0) {
             const upsertData = meetings.map(m => ({
               id: m.id,

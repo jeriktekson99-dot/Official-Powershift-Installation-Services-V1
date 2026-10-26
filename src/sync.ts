@@ -40,6 +40,28 @@ export interface SpecialOfferRecord {
   timestamp: number;
 }
 
+export interface PhotobucketRecord {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  storagePath?: string;
+  bucketName?: string;
+  mimeType?: string;
+  fileSizeBytes?: number;
+  width?: number;
+  height?: number;
+  title?: string;
+  caption?: string;
+  category: string;
+  entityType?: string;
+  entityId?: string;
+  uploadedBy?: string;
+  isPublic?: boolean;
+  metadata?: Record<string, any>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ProductRecord {
   id: string;
   name: string;
@@ -347,73 +369,47 @@ export function saveDb(db: SyncDb) {
     // Dispatch custom storage event for same-window updates
     window.dispatchEvent(new Event('powershift_db_update'));
   } catch (e: any) {
-    console.warn("Storage write failed in sync.ts. Entering progressive pruning and recovery mode:", e);
+    console.warn("Storage write failed in sync.ts. Entering progressive image stripping to protect lead records:", e);
     
-    // 1. Try stripping all lead images first (the main culprit)
+    // Protect all leads: strip large base64/data URLs from lead images, but NEVER delete the leads themselves!
     if (db.leads && db.leads.length > 0) {
-      const clonedLeads = db.leads.map(lead => ({ ...lead }));
-      let hadImages = false;
-      for (let i = 0; i < clonedLeads.length; i++) {
-        if (clonedLeads[i].images && clonedLeads[i].images.length > 0) {
-          clonedLeads[i].images = [];
-          hadImages = true;
-        }
-      }
+      const clonedLeads = db.leads.map(lead => {
+        const safeImages = (lead.images || []).map(img => {
+          const url = getImageUrl(img);
+          const label = getImageLabel(img);
+          if (url && (url.startsWith('data:') || url.length > 500)) {
+            return { url: '', label: label || 'Uploaded Document' };
+          }
+          return img;
+        });
+        return { ...lead, images: safeImages };
+      });
       
-      if (hadImages) {
-        try {
-          const prunedDb = { ...db, leads: clonedLeads };
-          localStorage.setItem("powershift_db", JSON.stringify(prunedDb));
-          db.leads = clonedLeads;
-          window.dispatchEvent(new Event('powershift_db_update'));
-          console.log("Successfully saved database after stripping all lead images.");
-          return;
-        } catch (err1) {
-          console.warn("Save still failed after stripping all lead images, trying further pruning...");
-        }
-      }
-      
-      // 2. Try slicing leads to latest 10
-      if (clonedLeads.length > 10) {
-        const slicedLeads = clonedLeads.slice(0, 10);
-        try {
-          const prunedDb = { ...db, leads: slicedLeads };
-          localStorage.setItem("powershift_db", JSON.stringify(prunedDb));
-          db.leads = slicedLeads;
-          window.dispatchEvent(new Event('powershift_db_update'));
-          console.log("Successfully saved database after pruning to 10 latest leads.");
-          return;
-        } catch (err2) {
-          console.warn("Save failed after pruning to 10 leads, trying further...");
-        }
-      }
-      
-      // 3. Try slicing leads to latest 2
-      if (clonedLeads.length > 2) {
-        const slicedLeads = clonedLeads.slice(0, 2);
-        try {
-          const prunedDb = { ...db, leads: slicedLeads };
-          localStorage.setItem("powershift_db", JSON.stringify(prunedDb));
-          db.leads = slicedLeads;
-          window.dispatchEvent(new Event('powershift_db_update'));
-          console.log("Successfully saved database after pruning to 2 latest leads.");
-          return;
-        } catch (err3) {
-          console.warn("Save failed after pruning to 2 leads, trying further...");
-        }
-      }
-
-      // 4. Try completely clearing leads array
       try {
-        const prunedDb = { ...db, leads: [] };
+        const prunedDb = { ...db, leads: clonedLeads };
         localStorage.setItem("powershift_db", JSON.stringify(prunedDb));
-        db.leads = [];
+        db.leads = clonedLeads;
         window.dispatchEvent(new Event('powershift_db_update'));
-        console.log("Successfully saved database after completely clearing leads.");
+        console.log("Successfully saved database after stripping heavy base64 images from leads.");
         return;
-      } catch (err4) {
-        console.warn("Save failed even after completely clearing leads.");
+      } catch (err1) {
+        console.warn("Save still failed after stripping lead images, stripping all images across DB...");
       }
+    }
+
+    // Secondary fallback: strip heavy base64 images across all collections
+    try {
+      const lightweightDb = {
+        ...db,
+        leads: (db.leads || []).map(l => ({ ...l, images: [] })),
+        portfolio: (db.portfolio || []).map(p => ({ ...p, images: (p.images || []).slice(0, 1) }))
+      };
+      localStorage.setItem("powershift_db", JSON.stringify(lightweightDb));
+      db.leads = lightweightDb.leads;
+      window.dispatchEvent(new Event('powershift_db_update'));
+      console.log("Successfully saved database with lightweight image references.");
+    } catch (err2) {
+      console.error("Critical storage error: could not write to localStorage.", err2);
     }
   }
 }
@@ -466,8 +462,9 @@ export function useSyncDb() {
       Promise.all([
         supabaseService.getPortfolio().catch(err => { console.warn("[Supabase Sync] Portfolio fetch error:", err); return null; }),
         supabaseService.getProducts().catch(err => { console.warn("[Supabase Sync] Products fetch error:", err); return null; }),
-        supabaseService.getPackages().catch(err => { console.warn("[Supabase Sync] Packages fetch error:", err); return null; })
-      ]).then(([portfolio, products, packages]) => {
+        supabaseService.getPackages().catch(err => { console.warn("[Supabase Sync] Packages fetch error:", err); return null; }),
+        supabaseService.getLeads().catch(err => { console.warn("[Supabase Sync] Leads fetch error:", err); return null; })
+      ]).then(([portfolio, products, packages, remoteLeads]) => {
         // Update the last synced timestamp in localStorage so other tabs and future reloads instantly benefit
         localStorage.setItem("powershift_db_last_synced", String(Date.now()));
 
@@ -489,6 +486,25 @@ export function useSyncDb() {
         if (packages !== null && Array.isArray(packages)) {
           if (JSON.stringify(localDb.packages) !== JSON.stringify(packages)) {
             localDb.packages = packages;
+            modified = true;
+          }
+        }
+        if (remoteLeads !== null && Array.isArray(remoteLeads)) {
+          const existingLeads = Array.isArray(localDb.leads) ? localDb.leads : [];
+          const leadMap = new Map<string, LeadRecord>();
+          // Retain all local leads (ensuring newly submitted inquiries are never overwritten)
+          existingLeads.forEach(l => leadMap.set(l.id, l));
+          // Merge in remote leads
+          remoteLeads.forEach(l => {
+            if (leadMap.has(l.id)) {
+              leadMap.set(l.id, { ...leadMap.get(l.id)!, ...l });
+            } else {
+              leadMap.set(l.id, l);
+            }
+          });
+          const mergedLeads = Array.from(leadMap.values());
+          if (JSON.stringify(localDb.leads) !== JSON.stringify(mergedLeads)) {
+            localDb.leads = mergedLeads;
             modified = true;
           }
         }
@@ -624,6 +640,12 @@ export function submitInboundLead(payload: {
       console.warn("[Powershift Supabase Sync] Failed to sync auto-scheduled Meeting to Supabase:", err);
     });
 
+    fetch('/api/meetings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMeeting)
+    }).catch(() => {});
+
     // 2. Create an Ocular Trip (AssessmentRecord)
     const assessmentsStr = localStorage.getItem("powershift_assessments");
     let assessmentsList = [];
@@ -668,6 +690,12 @@ export function submitInboundLead(payload: {
   }).catch((err) => {
     console.warn("[Powershift Supabase Sync] Failed to submit lead to Supabase (might be offline or unconfigured):", err);
   });
+
+  fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newLead)
+  }).catch(() => {});
 
   // Increment unread notifications count in localStorage using unified JSON array format
   const unreadStr = localStorage.getItem("powershift_unread_leads");
@@ -738,6 +766,29 @@ export function useSyncMeetings() {
 
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('powershift_meetings_update', handleUpdate);
+
+    // Initial background load from Supabase to catch up
+    supabaseService.getMeetings().then(remoteMeetings => {
+      if (remoteMeetings && Array.isArray(remoteMeetings) && remoteMeetings.length > 0) {
+        const local = getSavedMeetings();
+        const map = new Map<string, MeetingRecord>();
+        // Retain local meetings first so newly added meetings are not lost
+        local.forEach(m => map.set(m.id, m));
+        // Merge remote meetings
+        remoteMeetings.forEach(m => {
+          if (map.has(m.id)) {
+            map.set(m.id, { ...map.get(m.id)!, ...m });
+          } else {
+            map.set(m.id, m);
+          }
+        });
+        const merged = Array.from(map.values());
+        saveMeetings(merged);
+        setMeetings(merged);
+      }
+    }).catch(err => {
+      console.log("[Powershift Sync] Failed to load meetings from Supabase (using cached):", err);
+    });
 
     return () => {
       window.removeEventListener('storage', handleUpdate);

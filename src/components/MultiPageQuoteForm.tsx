@@ -158,7 +158,7 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
-        const maxDim = 800; // Limit dimension to max 800px width/height for lightweight database storage
+        const maxDim = 480; // Limit dimension to max 480px width/height for lightweight database storage
         
         if (width > maxDim || height > maxDim) {
           if (width > height) {
@@ -175,7 +175,7 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // Compress quality to 0.6 (~30KB - 50KB total size)
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5); // Lightweight (~12KB - 20KB each)
           if (fieldName === 'inverterLocationImage') setInverterLocationImageBase64(dataUrl);
           if (fieldName === 'photoMainPanelBoard') setPhotoMainPanelBoardBase64(dataUrl);
           if (fieldName === 'photoProposedLocation') setPhotoProposedLocationBase64(dataUrl);
@@ -592,9 +592,8 @@ export default function MultiPageQuoteForm({ theme = 'light', layout = 'default'
       doc.setFontSize(8);
       doc.text("Email: c2r2gsm@gmail.com  |  Phone: 0935 479 6321  |  Web: c2r2gsm@gmail.com", 15, y + 10);
 
-      const dataUri = doc.output('datauristring');
       uploadedImages.push({
-        url: dataUri,
+        url: "",
         label: "Client_Solar_ROI_Estimate_Report.pdf"
       });
     } catch (err) {

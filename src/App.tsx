@@ -164,11 +164,168 @@ function renderMessageText(text: string, isUser: boolean) {
   );
 }
 
+export type PageType = 
+  | 'home' 
+  | 'about' 
+  | 'services' 
+  | 'portfolio' 
+  | 'project-details' 
+  | 'products' 
+  | 'product-details' 
+  | 'free-quote' 
+  | 'privacy' 
+  | 'terms' 
+  | 'safety';
+
+export function getUrlForPage(
+  page: PageType,
+  details?: { projectId?: number; productId?: number; serviceId?: number }
+): string {
+  switch (page) {
+    case 'home':
+      return '/';
+    case 'about':
+      return '/about';
+    case 'services':
+      return details?.serviceId ? `/services?id=${details.serviceId}` : '/services';
+    case 'portfolio':
+      return '/portfolio';
+    case 'project-details':
+      return details?.projectId ? `/portfolio/${details.projectId}` : '/portfolio';
+    case 'products':
+      return '/products';
+    case 'product-details':
+      return details?.productId ? `/products/${details.productId}` : '/products';
+    case 'free-quote':
+      return '/free-quote';
+    case 'privacy':
+      return '/privacy';
+    case 'terms':
+      return '/terms';
+    case 'safety':
+      return '/safety';
+    default:
+      return '/';
+  }
+}
+
+export function getTitleForPage(page: PageType): string {
+  switch (page) {
+    case 'about':
+      return 'About Powershift Solar | Engineering Leadership & Clean Energy';
+    case 'services':
+      return 'Solar Services & Engineering | Powershift Solar';
+    case 'portfolio':
+      return 'Solar Portfolio & Completed Installations | Powershift Solar';
+    case 'project-details':
+      return 'Project Details | Powershift Solar Portfolio';
+    case 'products':
+      return 'Solar Products & Tier-1 Equipment Catalog | Powershift Solar';
+    case 'product-details':
+      return 'Product Specifications | Powershift Solar Equipment';
+    case 'free-quote':
+      return 'Get A Free Solar Quotation & Calculation | Powershift Solar';
+    case 'privacy':
+      return 'Privacy Policy | Powershift Solar';
+    case 'terms':
+      return 'Terms of Use | Powershift Solar';
+    case 'safety':
+      return 'Safety Standard Compliance | Powershift Solar';
+    case 'home':
+    default:
+      return 'Powershift Solar | Commercial & Residential Solar Solutions';
+  }
+}
+
+export function parseLocation(): {
+  page: PageType;
+  projectId?: number;
+  productId?: number;
+  serviceId?: number;
+} {
+  if (typeof window === 'undefined') {
+    return { page: 'home' };
+  }
+
+  const rawPath = window.location.pathname.toLowerCase();
+  const pathname = rawPath.replace(/\/+$/, '') || '/';
+  const searchParams = new URLSearchParams(window.location.search);
+  const pageParam = searchParams.get('page')?.toLowerCase();
+  const idParam = searchParams.get('id');
+
+  // 1. Query parameter overrides (for backward compatibility e.g. ?page=about)
+  if (pageParam) {
+    if (pageParam === 'project-details' || pageParam === 'project') {
+      return { page: 'project-details', projectId: idParam ? Number(idParam) : 1 };
+    }
+    if (pageParam === 'product-details' || pageParam === 'product') {
+      return { page: 'product-details', productId: idParam ? Number(idParam) : 1 };
+    }
+    if (pageParam === 'about') return { page: 'about' };
+    if (pageParam === 'services') return { page: 'services', serviceId: idParam ? Number(idParam) : undefined };
+    if (pageParam === 'portfolio' || pageParam === 'projects' || pageParam === 'gallery') return { page: 'portfolio' };
+    if (pageParam === 'products') return { page: 'products' };
+    if (pageParam === 'free-quote' || pageParam === 'quote' || pageParam === 'calculator') return { page: 'free-quote' };
+    if (pageParam === 'privacy') return { page: 'privacy' };
+    if (pageParam === 'terms') return { page: 'terms' };
+    if (pageParam === 'safety') return { page: 'safety' };
+  }
+
+  // 2. Standard pathname routes
+  if (pathname === '/' || pathname === '/home' || pathname === '/index.html') {
+    return { page: 'home' };
+  }
+  if (pathname === '/about' || pathname === '/about-us') {
+    return { page: 'about' };
+  }
+  if (pathname === '/services') {
+    const sId = searchParams.get('id');
+    return { page: 'services', serviceId: sId ? Number(sId) : undefined };
+  }
+  if (pathname === '/portfolio' || pathname === '/projects' || pathname === '/gallery') {
+    if (idParam) {
+      return { page: 'project-details', projectId: Number(idParam) };
+    }
+    return { page: 'portfolio' };
+  }
+  const projectMatch = pathname.match(/^\/(?:portfolio|project|projects)\/(\d+)$/);
+  if (projectMatch) {
+    return { page: 'project-details', projectId: Number(projectMatch[1]) };
+  }
+
+  if (pathname === '/products' || pathname === '/catalog') {
+    if (idParam) {
+      return { page: 'product-details', productId: Number(idParam) };
+    }
+    return { page: 'products' };
+  }
+  const productMatch = pathname.match(/^\/(?:products|product)\/(\d+)$/);
+  if (productMatch) {
+    return { page: 'product-details', productId: Number(productMatch[1]) };
+  }
+
+  if (pathname === '/free-quote' || pathname === '/quote' || pathname === '/calculator' || pathname === '/get-quote') {
+    return { page: 'free-quote' };
+  }
+  if (pathname === '/privacy' || pathname === '/privacy-policy') {
+    return { page: 'privacy' };
+  }
+  if (pathname === '/terms' || pathname === '/terms-of-use' || pathname === '/terms-and-conditions') {
+    return { page: 'terms' };
+  }
+  if (pathname === '/safety' || pathname === '/safety-standard' || pathname === '/safety-compliance') {
+    return { page: 'safety' };
+  }
+
+  return { page: 'home' };
+}
+
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'about' | 'services' | 'portfolio' | 'project-details' | 'products' | 'product-details' | 'free-quote' | 'privacy' | 'terms' | 'safety'>('home');
-  const [selectedServiceId, setSelectedServiceId] = useState<number>(1);
-  const [selectedProjectId, setSelectedProjectId] = useState<number>(1);
-  const [selectedProductId, setSelectedProductId] = useState<number>(1);
+  const initialLoc = typeof window !== 'undefined' ? parseLocation() : { page: 'home' as PageType };
+  const [currentPage, setCurrentPage] = useState<PageType>(initialLoc.page);
+  const [selectedServiceId, setSelectedServiceId] = useState<number>(initialLoc.serviceId || 1);
+  const [selectedProjectId, setSelectedProjectId] = useState<number>(initialLoc.projectId || 1);
+  const [selectedProductId, setSelectedProductId] = useState<number>(initialLoc.productId || 1);
   const [selectedProductCategories, setSelectedProductCategories] = useState<string[]>([]);
   const [detailsSourcePage, setDetailsSourcePage] = useState<'services' | 'portfolio'>('services');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -177,6 +334,39 @@ export default function App() {
 
   const { db } = useSyncDb();
   const socialLinks = useSyncSocialLinks();
+
+  const navigate = (
+    targetPage: PageType,
+    details?: {
+      projectId?: number;
+      productId?: number;
+      serviceId?: number;
+      replace?: boolean;
+      scrollToTop?: boolean;
+      hash?: string;
+    }
+  ) => {
+    const newPath = getUrlForPage(targetPage, details);
+    const newUrl = newPath + (details?.hash ? `#${details.hash}` : '');
+
+    const currentUrl = window.location.pathname + window.location.search;
+    if (details?.replace) {
+      window.history.replaceState({ page: targetPage, ...details }, '', newUrl);
+    } else if (currentUrl !== newPath || details?.hash) {
+      window.history.pushState({ page: targetPage, ...details }, '', newUrl);
+    }
+
+    setCurrentPage(targetPage);
+    if (details?.projectId) setSelectedProjectId(details.projectId);
+    if (details?.productId) setSelectedProductId(details.productId);
+    if (details?.serviceId) setSelectedServiceId(details.serviceId);
+
+    document.title = getTitleForPage(targetPage);
+
+    if (details?.scrollToTop !== false) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Dynamic projects derived from synchronized portfolio entries
   const projects = React.useMemo(() => {
@@ -261,26 +451,54 @@ export default function App() {
     }
   }, [maxStartIndex, productStartIndex]);
 
+  // Sync browser location with popstate (back/forward) and on initial load
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pageParam = params.get('page');
-    const idParam = params.get('id');
-    if (pageParam === 'project-details' && idParam) {
-      setSelectedProjectId(Number(idParam));
-      setCurrentPage('project-details');
-    } else if (pageParam === 'product-details' && idParam) {
-      setSelectedProductId(Number(idParam));
-      setCurrentPage('product-details');
-    } else if (pageParam) {
-      const allowedPages = ['home', 'about', 'services', 'portfolio', 'products', 'free-quote'];
-      if (allowedPages.includes(pageParam)) {
-        setCurrentPage(pageParam as any);
+    const handlePopState = () => {
+      const loc = parseLocation();
+      setCurrentPage(loc.page);
+      if (loc.projectId) setSelectedProjectId(loc.projectId);
+      if (loc.productId) setSelectedProductId(loc.productId);
+      if (loc.serviceId) setSelectedServiceId(loc.serviceId);
+      document.title = getTitleForPage(loc.page);
+
+      if (window.location.hash) {
+        const hashId = window.location.hash.replace('#', '');
+        setTimeout(() => {
+          const el = document.getElementById(hashId);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
       }
+    };
+
+    // Ensure document.title is synchronized on load
+    const currentLoc = parseLocation();
+    document.title = getTitleForPage(currentLoc.page);
+
+    // If query parameter was used (e.g., ?page=about), normalize to clean URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('page')) {
+      const cleanUrl = getUrlForPage(currentLoc.page, {
+        projectId: currentLoc.projectId,
+        productId: currentLoc.productId,
+        serviceId: currentLoc.serviceId
+      });
+      window.history.replaceState({ page: currentLoc.page }, '', cleanUrl);
     }
+
+    if (window.location.hash) {
+      const hashId = window.location.hash.replace('#', '');
+      setTimeout(() => {
+        const el = document.getElementById(hashId);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 250);
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const navigateToSection = (sectionId: string) => {
-    setCurrentPage('home');
+    navigate('home', { scrollToTop: false, hash: sectionId });
     setMobileMenuOpen(false);
     setTimeout(() => {
       const element = document.getElementById(sectionId);
@@ -292,7 +510,7 @@ export default function App() {
 
   const navigateToService = (id: number) => {
     setSelectedServiceId(id);
-    setCurrentPage('services');
+    navigate('services', { serviceId: id, scrollToTop: false });
     setTimeout(() => {
       const element = document.getElementById(`service-card-${id}`);
       if (element) {
@@ -510,14 +728,13 @@ export default function App() {
           <div className="flex items-center justify-between h-20">
             {/* Logo placeholder left */}
             <a
-              href="#hero"
+              href="/"
               onClick={(e) => {
                 e.preventDefault();
-                setCurrentPage('home');
+                navigate('home');
                 setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="flex items-center gap-3 group"
+              className="flex items-center gap-3 group cursor-pointer"
             >
               <img
                 src="https://lh3.googleusercontent.com/d/1Sjk5AyJUHg4LPT6_4FeUYRVJUJnUtNRE"
@@ -529,75 +746,81 @@ export default function App() {
 
             {/* Links center */}
             <nav className="hidden md:flex items-center space-x-8">
-              <button
-                onClick={() => {
-                  setCurrentPage('home');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              <a
+                href="/"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('home');
                 }}
                 className={`font-semibold transition-colors duration-200 cursor-pointer ${
                   currentPage === 'home' ? 'text-solar-yellow-500 font-bold' : 'text-white hover:text-solar-yellow-500'
                 }`}
               >
                 Home
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentPage('about');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              </a>
+              <a
+                href="/about"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('about');
                 }}
                 className={`font-semibold transition-colors duration-200 cursor-pointer ${
                   currentPage === 'about' ? 'text-solar-yellow-500 font-bold' : 'text-white hover:text-solar-yellow-500'
                 }`}
               >
                 About
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentPage('services');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              </a>
+              <a
+                href="/services"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('services');
                 }}
                 className={`font-semibold transition-colors duration-200 cursor-pointer ${
                   currentPage === 'services' ? 'text-solar-yellow-500 font-bold' : 'text-white hover:text-solar-yellow-500'
                 }`}
               >
                 Services
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentPage('portfolio');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              </a>
+              <a
+                href="/portfolio"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('portfolio');
                 }}
                 className={`font-semibold transition-colors duration-200 cursor-pointer ${
                   currentPage === 'portfolio' ? 'text-solar-yellow-500 font-bold' : 'text-white hover:text-solar-yellow-500'
                 }`}
               >
                 Gallery
-              </button>
-              <button
-                onClick={() => {
-                  setCurrentPage('products');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              </a>
+              <a
+                href="/products"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('products');
                 }}
                 className={`font-semibold transition-colors duration-200 cursor-pointer ${
                   currentPage === 'products' || currentPage === 'product-details' ? 'text-solar-yellow-500 font-bold' : 'text-white hover:text-solar-yellow-500'
                 }`}
               >
                 Products
-              </button>
+              </a>
             </nav>
 
             {/* CTA action button right */}
             <div className="hidden md:block">
-              <button
-                onClick={() => {
-                  setCurrentPage('free-quote');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+              <a
+                href="/free-quote"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('free-quote');
                 }}
                 className="inline-flex items-center gap-2 bg-solar-yellow-500 hover:bg-solar-yellow-400 text-forest-950 px-5 py-2.5 rounded-lg font-display font-bold text-sm tracking-wide shadow-md transition-all duration-250 transform active:scale-95 cursor-pointer"
               >
                 <span>Get A Quotation</span>
                 <ChevronRight className="w-4 h-4 text-forest-950 stroke-[3]" />
-              </button>
+              </a>
             </div>
 
             {/* Mobile menu toggle */}
@@ -621,78 +844,84 @@ export default function App() {
               className="md:hidden bg-forest-950 border-t border-forest-800"
             >
               <div className="px-4 pt-4 pb-6 space-y-3">
-                <button
-                  onClick={() => {
-                    setCurrentPage('home');
+                <a
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('home');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'home' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   Home
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage('about');
+                </a>
+                <a
+                  href="/about"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('about');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'about' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   About Our Engr
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage('services');
+                </a>
+                <a
+                  href="/services"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('services');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'services' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   Services
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage('portfolio');
+                </a>
+                <a
+                  href="/portfolio"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('portfolio');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'portfolio' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   Gallery
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage('products');
+                </a>
+                <a
+                  href="/products"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('products');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'products' || currentPage === 'product-details' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   Products
-                </button>
-                <button
-                  onClick={() => {
-                    setCurrentPage('free-quote');
+                </a>
+                <a
+                  href="/free-quote"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('free-quote');
                     setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className={`block w-full text-left px-3 py-2.5 rounded-lg font-medium transition-colors cursor-pointer ${
                     currentPage === 'free-quote' ? 'text-solar-yellow-500 bg-forest-900 font-bold' : 'text-white hover:bg-forest-900'
                   }`}
                 >
                   Get A Quotation
-                </button>
+                </a>
               </div>
             </motion.div>
           )}
@@ -811,8 +1040,7 @@ export default function App() {
               >
                 <button
                   onClick={() => {
-                    setCurrentPage('free-quote');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigate('free-quote');
                   }}
                   className="text-center bg-solar-yellow-500 hover:bg-solar-yellow-400 text-forest-950 font-display font-extrabold px-8 py-4 rounded-xl text-base tracking-wide shadow-lg hover:shadow-solar-yellow-500/15 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
                 >
@@ -1055,8 +1283,7 @@ export default function App() {
               <div className="flex md:justify-end shrink-0">
                 <button
                   onClick={() => {
-                    setCurrentPage('services');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigate('services');
                   }}
                   className="group inline-flex items-center gap-2.5 text-forest-900 hover:text-solar-yellow-600 font-display font-extrabold text-sm tracking-widest uppercase pb-1.5 border-b-2 border-forest-900/15 hover:border-solar-yellow-600 transition-all duration-300 cursor-pointer"
                   id="btn-explore-capabilities"
@@ -1080,24 +1307,14 @@ export default function App() {
                 className="group relative flex flex-col justify-between overflow-hidden bg-forest-50 border border-stone-200 hover:border-forest-700 rounded-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer"
                 id={`service-card-${service.id}`}
                 onClick={() => {
-                  setCurrentPage('services');
-                  setTimeout(() => {
-                    const idMap: Record<string, number> = {
-                      'residential': 1,
-                      'commercial': 2,
-                      'industrial-arrays': 3,
-                      'hybrid-bess': 4
-                    };
-                    const targetId = idMap[service.id];
-                    if (targetId) {
-                      const el = document.getElementById(`service-card-${targetId}`);
-                      if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    } else {
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
-                  }, 150);
+                  const idMap: Record<string, number> = {
+                    'residential': 1,
+                    'commercial': 2,
+                    'industrial-arrays': 3,
+                    'hybrid-bess': 4
+                  };
+                  const targetId = idMap[service.id] || 1;
+                  navigateToService(targetId);
                 }}
               >
                 <div>
@@ -1185,9 +1402,7 @@ export default function App() {
                     key={project.id}
                     className="relative group rounded-2xl overflow-hidden h-[400px] border border-forest-800 shadow-2xl cursor-pointer"
                     onClick={() => {
-                      setSelectedProjectId(idToNumber(project.id));
-                      setCurrentPage('project-details');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      navigate('project-details', { projectId: idToNumber(project.id) });
                     }}
                     id={`project-lg-${project.id}`}
                   >
@@ -1224,9 +1439,7 @@ export default function App() {
                     key={project.id}
                     className="relative group rounded-2xl overflow-hidden h-[300px] border border-forest-800/80 shadow-xl cursor-pointer"
                     onClick={() => {
-                      setSelectedProjectId(idToNumber(project.id));
-                      setCurrentPage('project-details');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      navigate('project-details', { projectId: idToNumber(project.id) });
                     }}
                     id={`project-sm-${project.id}`}
                   >
@@ -1341,8 +1554,7 @@ export default function App() {
               <div className="flex md:justify-end shrink-0">
                 <button
                   onClick={() => {
-                    setCurrentPage('products');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    navigate('products');
                   }}
                   className="group inline-flex items-center gap-2.5 text-forest-900 hover:text-solar-yellow-600 font-display font-extrabold text-sm tracking-widest uppercase pb-1.5 border-b-2 border-forest-900/15 hover:border-solar-yellow-600 transition-all duration-300 cursor-pointer"
                   id="btn-view-inventory"
@@ -1392,9 +1604,7 @@ export default function App() {
                         {/* Container design: Image */}
                         <div 
                           onClick={() => {
-                            setSelectedProductId(p.id);
-                            setCurrentPage('product-details');
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                            navigate('product-details', { productId: p.id });
                           }}
                           className="relative aspect-[4/3.3] bg-stone-100 overflow-hidden border-b border-stone-100 cursor-pointer"
                         >
@@ -1410,9 +1620,7 @@ export default function App() {
                         <div className="p-5 text-left flex-grow flex flex-col justify-between">
                           <h3 
                             onClick={() => {
-                              setSelectedProductId(p.id);
-                              setCurrentPage('product-details');
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                              navigate('product-details', { productId: p.id });
                             }}
                             className="font-display font-black text-sm sm:text-base text-forest-950 leading-snug hover:text-solar-yellow-600 transition-colors cursor-pointer line-clamp-2"
                           >
@@ -1668,8 +1876,7 @@ export default function App() {
           <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-start gap-4">
             <button
               onClick={() => {
-                setCurrentPage('free-quote');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                navigate('free-quote');
               }}
               className="group inline-flex items-center gap-3 bg-solar-yellow-500 hover:bg-solar-yellow-400 text-forest-950 px-8 py-4 rounded-xl font-display font-black text-base tracking-wider shadow-lg hover:shadow-solar-yellow-500/20 transition-all duration-300 transform active:scale-95 w-full sm:w-auto justify-center cursor-pointer"
             >
@@ -1678,7 +1885,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              onClick={() => { navigate('services'); }}
               className="group inline-flex items-center gap-3 bg-transparent hover:bg-white/10 text-white border-2 border-white px-8 py-4 rounded-xl font-display font-black text-base tracking-wider transition-all duration-300 transform active:scale-95 w-full sm:w-auto justify-center cursor-pointer"
             >
               <span>EXPLORE OUR SERVICES</span>
@@ -1690,7 +1897,7 @@ export default function App() {
       ) : currentPage === 'about' ? (
         <AboutPage 
           onStartConsultation={() => navigateToSection('contact')} 
-          onExploreServices={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+          onExploreServices={() => navigate('services')} 
         />
       ) : currentPage === 'services' ? (
         <ServicesPage
@@ -1707,7 +1914,7 @@ export default function App() {
             }));
             navigateToSection('contact');
           }}
-          onExploreServices={() => { setCurrentPage('portfolio'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onExploreServices={() => navigate('portfolio')}
         />
       ) : currentPage === 'portfolio' ? (
         <PortfolioPage
@@ -1716,21 +1923,17 @@ export default function App() {
             navigateToService(id);
           }}
           onSelectProject={(id) => {
-            setSelectedProjectId(id);
-            setCurrentPage('project-details');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('project-details', { projectId: id });
           }}
-          onExploreServices={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onExploreServices={() => navigate('services')}
         />
       ) : currentPage === 'products' ? (
         <ProductsPage
           onStartConsultation={() => navigateToSection('contact')}
           onSelectProduct={(id) => {
-            setSelectedProductId(id);
-            setCurrentPage('product-details');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('product-details', { productId: id });
           }}
-          onExploreServices={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onExploreServices={() => navigate('services')}
           selectedCategories={selectedProductCategories}
           onSelectedCategoriesChange={setSelectedProductCategories}
         />
@@ -1738,46 +1941,40 @@ export default function App() {
         <ProductDetailsPage
           productId={selectedProductId}
           onBack={() => {
-            setCurrentPage('products');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('products');
           }}
           onSelectProduct={(id) => {
-            setSelectedProductId(id);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('product-details', { productId: id });
           }}
           onStartConsultation={() => navigateToSection('contact')}
-          onExploreServices={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onExploreServices={() => navigate('services')}
           onSelectCategory={(category) => setSelectedProductCategories([category])}
         />
       ) : currentPage === 'project-details' ? (
         <ProjectDetailsPage
           projectId={selectedProjectId}
           onBack={() => {
-            setCurrentPage('portfolio');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('portfolio');
           }}
           onStartConsultation={() => navigateToSection('contact')}
-          onExploreServices={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onExploreServices={() => navigate('services')}
         />
       ) : currentPage === 'privacy' ? (
         <PrivacyPolicyPage
           onBack={() => {
-            setCurrentPage('home');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('home');
           }}
         />
       ) : currentPage === 'terms' ? (
         <TermsOfUsePage
           onBack={() => {
-            setCurrentPage('home');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('home');
           }}
         />
       ) : currentPage === 'safety' ? (
         <SafetyStandardPage
           onBack={() => {
-            setCurrentPage('home');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            navigate('home');
           }}
         />
       ) : (
@@ -1934,34 +2131,34 @@ export default function App() {
               </div>
               <ul className="space-y-1.5 text-xs font-mono text-stone-400">
                 <li>
-                  <button onClick={() => { setCurrentPage('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
+                  <a href="/" onClick={(e) => { e.preventDefault(); navigate('home'); }} className="block w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
                     Home
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button onClick={() => { setCurrentPage('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
+                  <a href="/about" onClick={(e) => { e.preventDefault(); navigate('about'); }} className="block w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
                     About
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button onClick={() => { setCurrentPage('services'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
+                  <a href="/services" onClick={(e) => { e.preventDefault(); navigate('services'); }} className="block w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
                     Services
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button onClick={() => { setCurrentPage('portfolio'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
+                  <a href="/portfolio" onClick={(e) => { e.preventDefault(); navigate('portfolio'); }} className="block w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
                     Gallery
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button onClick={() => { setCurrentPage('products'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
+                  <a href="/products" onClick={(e) => { e.preventDefault(); navigate('products'); }} className="block w-full text-left py-1 hover:text-solar-yellow-500 transition-colors cursor-pointer">
                     Products
-                  </button>
+                  </a>
                 </li>
                 <li>
-                  <button onClick={() => { setCurrentPage('free-quote'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="w-full text-left py-1 text-solar-yellow-400 font-bold hover:text-solar-yellow-300 transition-colors cursor-pointer">
+                  <a href="/free-quote" onClick={(e) => { e.preventDefault(); navigate('free-quote'); }} className="block w-full text-left py-1 text-solar-yellow-400 font-bold hover:text-solar-yellow-300 transition-colors cursor-pointer">
                     Get A Quotation
-                  </button>
+                  </a>
                 </li>
               </ul>
             </div>
@@ -2001,13 +2198,13 @@ export default function App() {
               &copy; {new Date().getFullYear()} Powershift Solar. All engineering assets and system layouts are proprietary.
             </div>
             <div className="flex gap-4">
-              <button onClick={() => { window.location.href = '/admin.html'; }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Admin Portal</button>
+              <a href="/admin.html" className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Admin Portal</a>
               <span className="text-stone-700">|</span>
-              <button onClick={() => { setCurrentPage('privacy'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Privacy Policy</button>
+              <a href="/privacy" onClick={(e) => { e.preventDefault(); navigate('privacy'); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Privacy Policy</a>
               <span className="text-stone-700">|</span>
-              <button onClick={() => { setCurrentPage('terms'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Terms of Use</button>
+              <a href="/terms" onClick={(e) => { e.preventDefault(); navigate('terms'); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Terms of Use</a>
               <span className="text-stone-700">|</span>
-              <button onClick={() => { setCurrentPage('safety'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Safety Standard Compliance</button>
+              <a href="/safety" onClick={(e) => { e.preventDefault(); navigate('safety'); }} className="hover:text-solar-yellow-500 transition-colors cursor-pointer uppercase">Safety Standard Compliance</a>
             </div>
           </div>
         </div>

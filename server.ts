@@ -37,6 +37,42 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// In-memory / server backups for leads and meetings
+let serverLeads: any[] = [];
+let serverMeetings: any[] = [];
+
+app.get("/api/leads", (req, res) => {
+  res.json({ leads: serverLeads });
+});
+
+app.post("/api/leads", (req, res) => {
+  try {
+    const lead = req.body;
+    if (lead && lead.id) {
+      serverLeads = [lead, ...serverLeads.filter(l => l.id !== lead.id)];
+    }
+    res.json({ status: "ok", count: serverLeads.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/meetings", (req, res) => {
+  res.json({ meetings: serverMeetings });
+});
+
+app.post("/api/meetings", (req, res) => {
+  try {
+    const meeting = req.body;
+    if (meeting && meeting.id) {
+      serverMeetings = [meeting, ...serverMeetings.filter(m => m.id !== meeting.id)];
+    }
+    res.json({ status: "ok", count: serverMeetings.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -117,6 +153,17 @@ RULES OF ENGAGEMENT:
 });
 
 async function startServer() {
+  // Direct handling for admin page
+  app.get(["/admin", "/admin.html"], (req, res, next) => {
+    if (process.env.NODE_ENV !== "production") {
+      req.url = "/admin.html";
+      return next();
+    } else {
+      const distPath = path.join(process.cwd(), "dist");
+      return res.sendFile(path.join(distPath, "admin.html"));
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
