@@ -6695,6 +6695,287 @@
             </div>
           </div>
         </div>
+
+        <!-- 4. PV Array Sizing & Electrical Specifications (Automated Real-Time Reactive) -->
+        <div class="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
+              <h4 class="font-display font-black text-sm text-stone-900 uppercase tracking-tight">
+                3. PV Array Sizing & Electrical Specifications
+              </h4>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="pv-out-status-pill" class="px-3 py-1 rounded-full text-[11px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 ${m.pvArray.isUnderThreshold ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'}">
+                ${m.pvArray.isUnderThreshold ? '✅ Within <20% Threshold' : '⚠️ Exceeds 20% Limit'}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-stone-100 text-stone-600 border border-stone-200">
+                PEC / NEC 690 Compliant
+              </span>
+            </div>
+          </div>
+
+          <!-- Capacity Comparison Banner & Oversizing Threshold Meter -->
+          <div class="p-4 rounded-xl border border-stone-150 bg-stone-50/75 space-y-3">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span id="pv-out-total-kwp-head" class="font-display font-black text-xl text-stone-900">
+                    ${m.pvArray.totalArrayKw.toFixed(2)} kWp Array
+                  </span>
+                  <span class="text-stone-400 font-bold">/</span>
+                  <span id="pv-out-system-kw-head" class="text-sm font-mono font-bold text-stone-600">
+                    ${m.pvArray.pSysKw.toFixed(1)} kW Inverter
+                  </span>
+                  <span id="pv-out-ratio-badge" class="px-2 py-0.5 rounded text-xs font-mono font-black ${m.pvArray.isUnderThreshold ? 'bg-emerald-200 text-emerald-950' : 'bg-rose-200 text-rose-950'}">
+                    ${m.pvArray.dcAcRatio.toFixed(2)}x DC:AC (${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}%)
+                  </span>
+                </div>
+                <p class="text-xs text-stone-500 mt-0.5 font-sans">
+                  Total panel sizing incorporates an oversizing threshold of <strong>under 20%</strong> relative to total system capacity.
+                </p>
+              </div>
+
+              <div class="text-right">
+                <span id="pv-out-max-ceiling" class="text-xs font-mono font-bold text-stone-700 block">
+                  ${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp Max Permitted
+                </span>
+                <span id="pv-out-margin-text" class="text-[11px] font-mono block ${m.pvArray.isUnderThreshold ? 'text-emerald-700' : 'text-rose-700 font-bold'}">
+                  ${m.pvArray.isUnderThreshold ? `${m.pvArray.thresholdMarginPercent.toFixed(1)}% Headroom Remaining` : `${Math.abs(m.pvArray.thresholdMarginPercent).toFixed(1)}% Over Threshold Limit!`}
+                </span>
+              </div>
+            </div>
+
+            <!-- Visual Capacity Bar with 20% Limit Line -->
+            <div class="space-y-1">
+              <div class="relative w-full h-3 bg-stone-200 rounded-full overflow-hidden">
+                <div 
+                  id="pv-out-progress-bar"
+                  class="h-full transition-all duration-300 ${m.pvArray.isUnderThreshold ? 'bg-emerald-600' : 'bg-rose-600'}"
+                  style="width: ${Math.min(100, Math.max(5, (m.pvArray.totalArrayKw / (m.pvArray.pSysKw * 1.35)) * 100))}%;"
+                ></div>
+                <!-- 20% limit marker -->
+                <div class="absolute top-0 bottom-0 left-[88.8%] w-0.5 bg-rose-500 z-10" title="20% Threshold Limit"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-stone-400">
+                <span>0 kWp</span>
+                <span>Nominal: ${m.pvArray.pSysKw.toFixed(1)} kW</span>
+                <span class="text-rose-600 font-bold">Max 20%: ${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp</span>
+              </div>
+            </div>
+
+            <!-- Dynamic explanation text -->
+            <div 
+              id="pv-out-threshold-desc" 
+              class="text-xs p-3 rounded-lg border leading-relaxed ${m.pvArray.isUnderThreshold ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}"
+            >
+              ${m.pvArray.isUnderThreshold 
+                ? `✔ <strong>Sizing Compliant:</strong> Total panel array capacity is <strong>${m.pvArray.totalArrayKw.toFixed(2)} kWp</strong>, which represents an oversizing of <strong>${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}%</strong> relative to the ${m.pvArray.pSysKw.toFixed(1)} kW system. This is safely below the maximum 20% oversizing threshold (${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp), optimizing inverter clipping and morning/afternoon generation curve without voiding inverter warranty.`
+                : `⚠ <strong>Oversizing Exceeded:</strong> Total panel array capacity is <strong>${m.pvArray.totalArrayKw.toFixed(2)} kWp</strong> (+${m.pvArray.deltaPercent.toFixed(1)}%), which exceeds the 20% relative system capacity limit (${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp). Recommended: Reduce panel count to <strong>${m.pvArray.autoCount} panels</strong> or upgrade inverter capacity to ensure warranty compliance and thermal safety.`
+              }
+            </div>
+          </div>
+
+          <!-- Interactive PV Panel & String Configuration Controls (No Apply Button - Real-Time) -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Module Wattage Rating -->
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-stone-700">PV Module Wattage</label>
+                <span class="text-[10px] font-mono text-stone-400">Mono PERC / N-Type</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input 
+                  id="solar-input-panelWattage"
+                  type="number"
+                  min="200"
+                  max="750"
+                  step="10"
+                  value="${m.pvArray.pModWatts}"
+                  oninput="window.updateSolarInput('panelWattage', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono font-bold text-stone-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span class="text-xs font-mono font-bold text-stone-500 shrink-0">Watts</span>
+              </div>
+              <p class="text-[10px] text-stone-500">Standard Tier-1 High-Efficiency Half-Cut Cells</p>
+            </div>
+
+            <!-- Panel Quantity Selector with Step Buttons -->
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-stone-700">Total Panels Quantity</label>
+                <button 
+                  type="button" 
+                  onclick="window.resetPvPanelsToOptimal()" 
+                  class="text-[10px] font-mono text-emerald-700 hover:text-emerald-800 font-bold underline cursor-pointer"
+                  title="Auto-calculate optimal count within <20% threshold"
+                >
+                  Auto: ${m.pvArray.autoCount} panels
+                </button>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button 
+                  type="button"
+                  onclick="window.stepPvPanels(-1)"
+                  class="w-8 h-9 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg font-bold text-stone-700 flex items-center justify-center cursor-pointer transition-colors"
+                >−</button>
+                <input 
+                  id="solar-input-pvPanelsCount"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value="${m.pvArray.actualCount}"
+                  oninput="window.updateSolarInput('pvPanelsCount', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-2 py-2 text-sm font-mono font-bold text-stone-900 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <button 
+                  type="button"
+                  onclick="window.stepPvPanels(1)"
+                  class="w-8 h-9 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg font-bold text-stone-700 flex items-center justify-center cursor-pointer transition-colors"
+                >+</button>
+              </div>
+              <div id="pv-out-panels-summary" class="text-[10px] font-mono text-stone-500 text-center">
+                ${m.pvArray.actualCount} panels × ${m.pvArray.pModWatts}W = ${(m.pvArray.totalArrayWatts/1000).toFixed(2)} kWp
+              </div>
+            </div>
+
+            <!-- String Configuration -->
+            <div class="p-4 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-stone-700">PV Array Strings</label>
+                <span id="pv-out-strings-badge" class="text-[10px] font-mono text-stone-500">
+                  ${m.pvArray.numStrings} ${m.pvArray.numStrings === 1 ? 'String' : 'Parallel Strings'}
+                </span>
+              </div>
+              <div class="flex items-center gap-2">
+                <input 
+                  id="solar-input-pvStringsCount"
+                  type="number"
+                  min="1"
+                  max="8"
+                  value="${m.pvArray.numStrings}"
+                  oninput="window.updateSolarInput('pvStringsCount', this.value)"
+                  class="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm font-mono font-bold text-stone-900 text-right focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span class="text-xs font-mono font-bold text-stone-500 shrink-0">Strings</span>
+              </div>
+              <div id="pv-out-string-voltage" class="text-[10px] font-mono text-stone-500">
+                Operating Vmp: ~${m.pvArray.stringVmp.toFixed(0)}V DC | Max Voc: ~${m.pvArray.stringVocMax.toFixed(0)}V DC
+              </div>
+            </div>
+          </div>
+
+          <!-- Comprehensive Electrical Sizing: THHN Copper Wire & Circuit Breakers (AC & DC) -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Card 1: PV Array DC Wire Sizing & DC Circuit Breaker -->
+            <div class="p-4 rounded-xl border border-sky-200 bg-sky-50/50 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-sky-100 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-sky-600"></span>
+                  <h5 class="text-xs font-mono font-black uppercase text-sky-950 tracking-wider">
+                    PV Array DC Wiring & DC Breaker
+                  </h5>
+                </div>
+                <span class="text-[10px] font-mono bg-sky-200 text-sky-900 px-2 py-0.5 rounded font-bold">
+                  DC Circuit (1000V DC)
+                </span>
+              </div>
+
+              <div class="space-y-2 text-xs text-stone-700">
+                <div class="flex justify-between items-center py-1 border-b border-sky-100/60">
+                  <span class="text-stone-500">Required THHN Copper Wire:</span>
+                  <span id="pv-out-dc-wire-badge" class="font-mono font-black text-sky-900 bg-white px-2 py-0.5 rounded border border-sky-200">
+                    ${m.pvArray.dcWireGauge} THHN
+                  </span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-sky-100/60">
+                  <span class="text-stone-500">THHN Wire Ampacity (90°C):</span>
+                  <span id="pv-out-dc-wire-amp" class="font-mono font-bold text-stone-900">${m.pvArray.dcWireAmpacity}A (90°C)</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-sky-100/60">
+                  <span class="text-stone-500">Max Continuous DC Current (1.25×):</span>
+                  <span id="pv-out-dc-wire-req" class="font-mono font-bold text-sky-700">${m.pvArray.reqDcCurrent.toFixed(1)}A DC</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-sky-100/60">
+                  <span class="text-stone-500">Conduit Size (EMT/Rigid PVC):</span>
+                  <span id="pv-out-dc-conduit" class="font-mono font-bold text-stone-800">${m.pvArray.dcConduit}</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-sky-100/60">
+                  <span class="text-stone-500">Estimated Voltage Drop:</span>
+                  <span id="pv-out-dc-drop" class="font-mono font-bold text-emerald-700">${m.pvArray.dcVoltDrop} (<3% standard)</span>
+                </div>
+
+                <!-- DC Circuit Breaker Sizing -->
+                <div class="mt-3 p-3 bg-white rounded-lg border border-sky-200 space-y-1.5">
+                  <div class="flex justify-between items-center">
+                    <span class="font-bold text-stone-800 text-[11px] uppercase tracking-tight">Required DC Circuit Breaker:</span>
+                    <span id="pv-out-dc-breaker-badge" class="font-mono font-black text-xs text-sky-900 bg-sky-100 px-2.5 py-0.5 rounded border border-sky-300">
+                      ${m.pvArray.dcBreakerAmps}A DC MCB (2-Pole)
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-stone-600 leading-normal">
+                    <strong>Type:</strong> DC MCB (Direct Current Miniature Circuit Breaker) 600V–1000V DC rated, 2-Pole. Protects solar PV string wiring and MPPT inputs against overcurrent and reverse-feed ground faults.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Inverter AC Output Wire Sizing & AC Circuit Breaker -->
+            <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50 space-y-3.5">
+              <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                  <h5 class="text-xs font-mono font-black uppercase text-indigo-950 tracking-wider">
+                    Inverter AC Grid-Tie Wiring & AC Breaker
+                  </h5>
+                </div>
+                <span class="text-[10px] font-mono bg-indigo-200 text-indigo-900 px-2 py-0.5 rounded font-bold">
+                  AC Circuit (${m.pvArray.isThreePhase ? '400V 3-Phase' : '230V 1-Phase'})
+                </span>
+              </div>
+
+              <div class="space-y-2 text-xs text-stone-700">
+                <div class="flex justify-between items-center py-1 border-b border-indigo-100/60">
+                  <span class="text-stone-500">Required THHN Copper Wire:</span>
+                  <span id="pv-out-ac-wire-badge" class="font-mono font-black text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200">
+                    ${m.pvArray.acWireGauge} THHN
+                  </span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-indigo-100/60">
+                  <span class="text-stone-500">THHN Wire Ampacity (90°C):</span>
+                  <span id="pv-out-ac-wire-amp" class="font-mono font-bold text-stone-900">${m.pvArray.acWireAmpacity}A (90°C)</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-indigo-100/60">
+                  <span class="text-stone-500">AC Full Load & Design Current (1.25×):</span>
+                  <span id="pv-out-ac-wire-req" class="font-mono font-bold text-indigo-700">
+                    ${m.pvArray.acFullLoadAmps.toFixed(1)}A (${m.pvArray.reqAcCurrent.toFixed(1)}A Design)
+                  </span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-indigo-100/60">
+                  <span class="text-stone-500">Conduit Size (EMT Conduit):</span>
+                  <span id="pv-out-ac-conduit" class="font-mono font-bold text-stone-800">${m.pvArray.acConduit}</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-indigo-100/60">
+                  <span class="text-stone-500">Roof Area Required (Est.):</span>
+                  <span class="font-mono font-bold text-stone-800">~${m.pvArray.estRoofAreaM2} m² (~${(parseFloat(m.pvArray.estRoofAreaM2) * 10.76).toFixed(0)} sq ft)</span>
+                </div>
+
+                <!-- AC Circuit Breaker Sizing -->
+                <div class="mt-3 p-3 bg-white rounded-lg border border-indigo-200 space-y-1.5">
+                  <div class="flex justify-between items-center">
+                    <span class="font-bold text-stone-800 text-[11px] uppercase tracking-tight">Required AC Circuit Breaker:</span>
+                    <span id="pv-out-ac-breaker-badge" class="font-mono font-black text-xs text-indigo-900 bg-indigo-100 px-2.5 py-0.5 rounded border border-indigo-300">
+                      ${m.pvArray.acBreakerAmps}A AC MCB (2-Pole)
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-stone-600 leading-normal">
+                    <strong>Type:</strong> AC MCB / RCBO (Alternating Current Miniature Circuit Breaker with Residual Current / Earth Leakage Protection) 230V AC rated, 2-Pole. Protects inverter AC output tie-in at Main Distribution Panel (MDP).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       `;
     };
 
@@ -6969,9 +7250,7 @@
         doc.line(15, y, 195, y);
       });
 
-
-
-      // Contact Footer Information (Public Estimate PDF style)
+      // Contact Footer Information (Page 1)
       const footerY = 268;
       doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setLineWidth(0.75);
@@ -6986,6 +7265,203 @@
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(8);
       doc.text("Email: c2r2gsm@gmail.com  |  Phone: 0935 479 6321  |  Web: www.powershift.asia", 15, footerY + 10);
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(150, 150, 150);
+      doc.text("Page 1 of 2", 195, footerY + 10, { align: "right" });
+
+      // PAGE 2: PV ARRAY SIZING, THHN WIRE SPECIFICATIONS & CIRCUIT BREAKER RATINGS
+      doc.addPage();
+
+      // Page 2 Header Banner
+      doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.rect(0, 0, 210, 32, 'F');
+
+      if (typeof POWERSHIFT_LOGO_BASE64 === "string" && POWERSHIFT_LOGO_BASE64.startsWith("data:image")) {
+        try {
+          doc.addImage(POWERSHIFT_LOGO_BASE64, 'PNG', 15, 3, 26, 26);
+        } catch (e) {
+          drawLogoFallbackBadge(doc, 15, 3);
+        }
+      } else {
+        drawLogoFallbackBadge(doc, 15, 3);
+      }
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("POWERSHIFT SOLAR ENGINEERING DESK", 46, 15);
+
+      doc.setFontSize(8.5);
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+      doc.text("ELECTRICAL SPECIFICATIONS & PV ARRAY SIZING REPORT", 46, 22);
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text(`CLIENT: ${displayClient}`, 195, 16, { align: "right" });
+      doc.text(`DATE: ${currentDateStr}`, 195, 22, { align: "right" });
+
+      let y2 = 42;
+
+      // Section 4: PV Array Sizing & Oversizing Threshold
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("4. PV ARRAY SIZING & OVERSZING THRESHOLD COMPLIANCE", 15, y2);
+      y2 += 6;
+      doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+      doc.line(15, y2, 195, y2);
+
+      y2 += 4;
+      const isCompliant = m.pvArray.isUnderThreshold;
+      if (isCompliant) {
+        doc.setFillColor(236, 248, 239);
+        doc.roundedRect(15, y2, 180, 16, 2, 2, 'F');
+        doc.setDrawColor(160, 215, 180);
+        doc.roundedRect(15, y2, 180, 16, 2, 2, 'S');
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text("THRESHOLD STATUS: COMPLIANT (UNDER 20% SYSTEM CAPACITY)", 20, y2 + 6);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+        doc.text(`Array size is ${m.pvArray.totalArrayKw.toFixed(2)} kWp (${m.pvArray.dcAcRatio.toFixed(2)}x DC:AC ratio, ${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}%). Remaining headroom: ${m.pvArray.thresholdMarginPercent.toFixed(1)}% below 20% limit (${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp max).`, 20, y2 + 12);
+      } else {
+        doc.setFillColor(254, 242, 242);
+        doc.roundedRect(15, y2, 180, 16, 2, 2, 'F');
+        doc.setDrawColor(248, 113, 113);
+        doc.roundedRect(15, y2, 180, 16, 2, 2, 'S');
+
+        doc.setFont("Helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.setTextColor(185, 28, 28);
+        doc.text("THRESHOLD STATUS: EXCEEDS 20% MAXIMUM SYSTEM THRESHOLD", 20, y2 + 6);
+
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+        doc.text(`Array size is ${m.pvArray.totalArrayKw.toFixed(2)} kWp (+${m.pvArray.deltaPercent.toFixed(1)}%), exceeding 20% limit of ${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp. Recommended: Reduce to ${m.pvArray.autoCount} panels.`, 20, y2 + 12);
+      }
+      y2 += 21;
+
+      const sec4Data = [
+        ["Total Inverter Capacity (Nominal AC)", `${m.pvArray.pSysKw.toFixed(1)} kW`],
+        ["20% Maximum Array Ceiling Threshold", `${m.pvArray.maxAllowedArrayKw.toFixed(2)} kWp (1.20x Max)`],
+        ["PV Module Specification", `${m.pvArray.pModWatts}W Tier-1 Monocrystalline PERC`],
+        ["Total Panels Installed", `${m.pvArray.actualCount} Modules (${m.pvArray.numStrings} ${m.pvArray.numStrings === 1 ? 'String' : 'Parallel Strings'})`],
+        ["Total Installed PV Array Capacity", `${m.pvArray.totalArrayKw.toFixed(2)} kWp (${m.pvArray.totalArrayWatts.toLocaleString()} W)`],
+        ["DC-to-AC Sizing Ratio", `${m.pvArray.dcAcRatio.toFixed(2)}x (${m.pvArray.deltaPercent >= 0 ? '+' : ''}${m.pvArray.deltaPercent.toFixed(1)}% delta)`],
+        ["String Operating Voltage (Vmp @ STC)", `~${m.pvArray.stringVmp.toFixed(0)} V DC (Operating)`],
+        ["Max String Open-Circuit Voltage (Voc Cold)", `~${m.pvArray.stringVocMax.toFixed(0)} V DC (<1000V DC Limit)`]
+      ];
+
+      sec4Data.forEach((row) => {
+        y2 += 7;
+        doc.setFont("Helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+        doc.text(row[0], 20, y2 - 2);
+
+        doc.setFont("Helvetica", "bold");
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(row[1], 195, y2 - 2, { align: "right" });
+
+        doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+        doc.line(15, y2, 195, y2);
+      });
+
+      y2 += 11;
+
+      // Section 5: THHN Wire & Circuit Breakers (AC & DC)
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("5. THHN WIRE & CIRCUIT BREAKER SPECIFICATIONS (PEC / NEC 690)", 15, y2);
+      y2 += 6;
+      doc.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+      doc.line(15, y2, 195, y2);
+
+      y2 += 4;
+      // Card A: DC Array Circuit
+      doc.setFillColor(240, 249, 255);
+      doc.roundedRect(15, y2, 87, 65, 2, 2, 'F');
+      doc.setDrawColor(186, 230, 253);
+      doc.roundedRect(15, y2, 87, 65, 2, 2, 'S');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(3, 105, 161);
+      doc.text("PV DC STRING SPECIFICATIONS", 20, y2 + 7);
+
+      doc.setFontSize(8);
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+      doc.text("Circuit Voltage: Up to 1000V DC", 20, y2 + 15);
+      doc.text(`Max Continuous Current (1.25x): ${m.pvArray.reqDcCurrent.toFixed(1)}A DC`, 20, y2 + 22);
+
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(3, 105, 161);
+      doc.text("Required THHN Wire:", 20, y2 + 30);
+      doc.text(`${m.pvArray.dcWireGauge} THHN`, 20, y2 + 36);
+
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+      doc.text(`Ampacity: ${m.pvArray.dcWireAmpacity}A (90°C) | Conduit: ${m.pvArray.dcConduit.split(' ')[0]} ${m.pvArray.dcConduit.split(' ')[1]}`, 20, y2 + 43);
+
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(3, 105, 161);
+      doc.text("DC Circuit Breaker:", 20, y2 + 51);
+      doc.text(`${m.pvArray.dcBreakerAmps}A DC MCB (2-Pole, 1000V DC)`, 20, y2 + 57);
+
+      // Card B: AC Inverter Output Circuit
+      doc.setFillColor(238, 242, 255);
+      doc.roundedRect(108, y2, 87, 65, 2, 2, 'F');
+      doc.setDrawColor(199, 210, 254);
+      doc.roundedRect(108, y2, 87, 65, 2, 2, 'S');
+
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(67, 56, 202);
+      doc.text("INVERTER AC OUTPUT SPECIFICATIONS", 113, y2 + 7);
+
+      doc.setFontSize(8);
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+      doc.text(`Grid Voltage: ${m.pvArray.isThreePhase ? '400V 3-Phase' : '230V Single Phase'}`, 113, y2 + 15);
+      doc.text(`Full Load: ${m.pvArray.acFullLoadAmps.toFixed(1)}A | Design (1.25x): ${m.pvArray.reqAcCurrent.toFixed(1)}A`, 113, y2 + 22);
+
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(67, 56, 202);
+      doc.text("Required THHN Wire:", 113, y2 + 30);
+      doc.text(`${m.pvArray.acWireGauge} THHN`, 113, y2 + 36);
+
+      doc.setFont("Helvetica", "normal");
+      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+      doc.text(`Ampacity: ${m.pvArray.acWireAmpacity}A (90°C) | Conduit: ${m.pvArray.acConduit}`, 113, y2 + 43);
+
+      doc.setFont("Helvetica", "bold");
+      doc.setTextColor(67, 56, 202);
+      doc.text("AC Circuit Breaker:", 113, y2 + 51);
+      doc.text(`${m.pvArray.acBreakerAmps}A AC MCB / RCBO (2-Pole, 230V)`, 113, y2 + 57);
+
+      // Page 2 Footer
+      doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setLineWidth(0.75);
+      doc.line(15, footerY, 195, footerY);
+
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.setFont("Helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("CONTACT OUR ENGINEERING DESK TO GET A DETAILED PROPOSAL", 15, footerY + 5);
+
+      doc.setTextColor(darkTextColor[0], darkTextColor[1], darkTextColor[2]);
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text("Email: c2r2gsm@gmail.com  |  Phone: 0935 479 6321  |  Web: www.powershift.asia", 15, footerY + 10);
+      doc.text("Page 2 of 2", 195, footerY + 10, { align: "right" });
 
       const clientSlug = solarState.clientName ? solarState.clientName.trim().replace(/[^a-zA-Z0-9]+/g, '_') : 'Proposal';
       doc.save(`Powershift_Solar_Proposal_${clientSlug}_${m.solarWatts}W.pdf`);
